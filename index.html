@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROOTS Consulting - Cloud SOP</title>
+    <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/circular-std">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+    <style>
+    :root {
+      --ink: #0f172a; --muted: #475569; --line: #e2e8f0;
+      --brand: #206efb; --brand-light: #eff6ff; --brand-dark: #165fd9;
+      --danger: #dc2626; --status-bg: #f8fafc; --status-border:#94a3b8;
+      --status-text: #334155; --warning-bg: #fffbf0; --warning-text: #b45309;
+      --bg: #ffffff; --app-bg: #f4f7fb; --shadow: 0 6px 20px rgba(15,23,42,.08); --radius: 16px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ink: #f8fafc; --muted: #94a3b8; --line: #334155;
+        --brand: #3b82f6; --brand-light: #1e3a8a; --brand-dark: #60a5fa;
+        --danger: #ef4444; --status-bg: #1e293b; --status-border:#475569;
+        --status-text: #cbd5e1; --warning-bg: #451a03; --warning-text: #fde68a;
+        --bg: #0f172a; --app-bg: #020617; --shadow: 0 6px 20px rgba(0,0,0,.5);
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Circular Std', system-ui, sans-serif; }
+
+    body { background-color: var(--app-bg); color: var(--ink); }
+    #roots-sop-container { padding-bottom: 5rem; min-height: 100vh; overflow-x: hidden; }
+
+    .roots-sop { max-width: 1800px; width: 98%; margin: 0 auto; padding: 2rem 1rem; }
+    .sop-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.25rem;
+      min-height: 64px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      gap: 14px;
+      margin-bottom: 1rem;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .logo-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      background: var(--brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .wordmark {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+    .wordmark span { color: var(--brand); }
+
+    .header-divider {
+      width: 1px;
+      height: 16px;
+      background: var(--line);
+      flex-shrink: 0;
+    }
+
+    .header-sub {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .header-sep {
+      width: 1px;
+      height: 22px;
+      background: var(--line);
+      margin: 0 4px;
+    }
+
+    .search-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      width: 240px;
+      min-width: 240px;
+      height: 40px;
+      padding: 0 12px 0 36px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--bg);
+      flex-shrink: 0;
+      overflow: hidden;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .search-wrap:focus-within {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(32, 110, 251, 0.12);
+    }
+
+    .search-wrap .search-icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+      width: 14px;
+      height: 14px;
+    }
+
+    .search-bar {
+      display: block;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      margin: 0;
+      border: 0 !important;
+      background: transparent !important;
+      color: var(--ink);
+      font-size: 0.88rem;
+      line-height: 1.2;
+      outline: 0 !important;
+      border-radius: 0;
+      appearance: none;
+      -webkit-appearance: none;
+      -webkit-border-radius: 999px;
+      box-shadow: none !important;
+      -webkit-box-shadow: none !important;
+      -webkit-text-fill-color: var(--ink);
+      min-width: 0;
+    }
+    .search-bar::placeholder { color: var(--muted); }
+    .search-bar:focus,
+    .search-bar:active {
+      width: 100%;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      -webkit-box-shadow: none !important;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .icon-btn:hover {
+      background: var(--status-bg);
+      color: var(--ink);
+    }
+
+    .header-action-btn {
+      height: 40px;
+      padding: 0 14px;
+      font-size: .88rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .sync-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 40px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--status-text);
+      font-size: .85rem;
+      font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .sync-badge i { font-size: 1rem; }
+    .sync-badge.online i { color: #10b981; }
+    .sync-badge.offline {
+      background: var(--warning-bg);
+      color: var(--warning-text);
+      border-color: #fbbf24;
+    }
+    .sync-badge.offline i { color: #f59e0b; }
+
+    .header-right .btn-save:hover { transform: none; }
+
+    .btn-save { background: var(--brand); color: #fff; border: none; border-radius: 999px; padding: .68rem 1.55rem; font-size: .93rem; font-weight: 600; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(32,110,251,0.3); }
+    .btn-save:hover { background: var(--brand-dark); transform: translateY(-2px); }
+    .btn-revision { background: var(--bg); border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: .68rem 1.3rem; font-size: .88rem; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 8px; font-weight: 500;}
+    .btn-revision:hover { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+    .track { background: var(--bg); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 2.5rem; display: flex; flex-direction: column; overflow: hidden; }
+    .track-header { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--line); }
+    .track-badge { font-size: .75rem; font-weight: 700; text-transform: uppercase; padding: .35rem .85rem; border-radius: 999px; white-space: nowrap; }
+
+    .track-pre .track-badge { background: #dbe7ff; color: #165fd9; } .track-pre .track-header { background: rgba(219, 231, 255, 0.1); }
+    .track-ops .track-badge { background: #d0f4ee; color: #0f6b57; } .track-ops .track-header { background: rgba(208, 244, 238, 0.1); }
+    .track-post .track-badge { background: #ede9fe; color: #5b21b6; } .track-post .track-header { background: rgba(237, 233, 254, 0.1); }
+
+    .phases-wrapper { position: relative; display: flex; align-items: stretch; width: 100%; }
+    .phases-row { display: flex; flex-wrap: nowrap; align-items: stretch; overflow-x: auto; padding-bottom: 8px; position: relative; scroll-behavior: smooth; flex-grow: 1; }
+    .phases-row::-webkit-scrollbar { height: 8px; }
+    .phases-row::-webkit-scrollbar-thumb { background: var(--status-border); border-radius: 4px; }
+
+    .scroll-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: var(--bg); border: 1px solid var(--line); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; box-shadow: var(--shadow); opacity: 0; transition: opacity 0.2s; pointer-events: none; color: var(--ink); }
+    .scroll-arrow:hover { background: var(--brand-light); color: var(--brand); }
+    .scroll-arrow.visible { opacity: 1; pointer-events: auto; }
+    .scroll-arrow.left { left: 10px; }
+    .scroll-arrow.right { right: 10px; }
+
+    .phases-wrapper::after { content: ''; position: absolute; right: 0; top: 0; bottom: 8px; width: 40px; background: linear-gradient(to right, transparent, var(--bg)); pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 5; }
+    .phases-wrapper.can-scroll-right::after { opacity: 1; }
+
+    .phase-col { flex: 0 0 460px; display: flex; flex-direction: column; border-right: 1px solid var(--line); position: relative; }
+    .phase-col:last-child { border-right: none; }
+
+    .phase-label { font-size: .9rem; font-weight: 700; text-transform: uppercase; color: var(--muted); padding: .8rem 1.2rem; border-bottom: 1px solid var(--line); background: var(--status-bg); min-height: 64px; display: flex; align-items: center; justify-content: center; }
+    .phase-label.edit-wrap { align-items: center; justify-content: center; gap: 8px; width: 100%; }
+    .phase-label .edit-target { max-width: calc(100% - 44px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; display: block; }
+    .phase-cards { padding: 1rem; display: flex; flex-direction: column; gap: .8rem; flex-grow: 1; min-height: 150px; }
+
+    .sop-card { border: 1px solid var(--line); border-radius: 12px; background: var(--bg); position: relative; transition: box-shadow 0.2s, opacity 0.2s; min-height: 132px; margin-bottom: 10px; display: flex; flex-direction: column; }
+    .sop-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .sop-card.search-match { border: 2px solid var(--brand) !important; box-shadow: 0 0 0 4px rgba(32,110,251,0.15) !important; }
+    .sop-card.search-nomatch { opacity: 0.3; transition: opacity 0.2s; }
+
+    .card-trigger { display: flex; flex-direction: column; padding: .8rem 1rem; cursor: pointer; gap: .5rem; min-height: 118px; justify-content: space-between; }
+    .card-header-main { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; gap: 10px; }
+    .card-body { display: none; border-top: 1px solid var(--line); padding-bottom: 1rem; }
+    .sop-card.open .card-body { display: block; }
+
+    .card-title-wrap { flex: 1; min-width: 0; display: flex; align-items: flex-start; min-height: 2.8em; }
+    .card-title { font-size: .95rem; font-weight: 700; color: var(--ink); flex: 1; min-width: 0; line-height: 1.35; }
+    .card-title .edit-target { display: -webkit-box; overflow-wrap: anywhere; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-height: 2.7em; }
+    .card-title .edit-target[contenteditable="true"] { display: block; -webkit-line-clamp: initial; line-clamp: initial; -webkit-box-orient: initial; overflow: visible; max-height: none; }
+    .card-actions { display: flex; align-items: center; gap: .25rem; flex-shrink: 0; }
+    .action-icon { color: var(--muted); font-size: 1.24rem; transition: transform .2s, color .2s; padding: 6px; border-radius: 6px; cursor: pointer; }
+    .action-icon:hover { background: var(--line); color: var(--ink); }
+    .edit-title-icon { color: var(--brand); }
+    .sop-card.open .chevron-icon { transform: rotate(180deg); }
+
+    .card-meta-chips { display: flex; justify-content: flex-end; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--muted); flex-wrap: wrap; width: 100%; margin-left: 0; }
+    .meta-chip { background: var(--status-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line); display: flex; align-items: center; gap: 3px;}
+
+    .field { padding: 0.8rem 1rem; border-bottom: 1px solid var(--line); }
+    .field:last-child { border-bottom: none; }
+    .field-label { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: .6rem; }
+    .field-header-flex { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .field-header-flex span { display: flex; align-items: center; gap: 6px; }
+    .item-count { background: var(--line); padding: 2px 6px; border-radius: 10px; font-size: 0.65rem; color: var(--ink); }
+    .main-icon { color: var(--brand); font-size: 1.02rem; }
+
+    .field-content ul { list-style-type: none !important; padding: 0 !important; margin: 0 !important; display: flex; flex-direction: column; gap: 12px; }
+    .item-container { list-style-type: none !important; display: flex; flex-direction: column; position: relative; transition: opacity 0.3s; }
+    .item-row { display: flex; align-items: flex-start; flex-wrap: nowrap !important; gap: 8px; position: relative; padding-left: 1.2rem; margin-top: 5px; }
+    .item-row::before { content: '›'; position: absolute; left: 0; color: var(--brand); font-weight: 700; font-size: 1.2rem; top: -4px; }
+
+    .edit-wrap { display: flex; align-items: flex-start; gap: 6px; flex-wrap: nowrap !important; width: 100%; }
+    .edit-target { flex-grow: 1; word-wrap: break-word; white-space: normal; min-width: 0; outline: none; line-height: 1.4; color: var(--ink); }
+    .edit-target[contenteditable="true"] { background: var(--status-bg); padding: 4px 6px; border-radius: 4px; outline: 1px dashed var(--brand); cursor: text; display: block; width: 100%; min-height: 3em; resize: vertical; overflow: auto; }
+
+    .edit-pen { flex-shrink: 0; cursor: pointer; color: var(--muted); font-size: 1.06rem; opacity: 0.55; transition: opacity 0.2s; padding: 4px; border-radius: 6px; margin-top: 0; }
+    .edit-wrap:hover .edit-pen { opacity: 1; }
+    .edit-pen:hover { background: var(--line); color: var(--brand); }
+
+    .item-actions { display: flex; flex-shrink: 0; flex-wrap: nowrap !important; gap: 4px; opacity: 0.4; transition: opacity 0.2s; margin-top: 1px; align-items: center; }
+    .item-row:hover .item-actions { opacity: 1; }
+    .action-btn-small { cursor: pointer; border-radius: 6px; padding: 4px 6px; font-size: 1.15rem; color: var(--muted); transition: all 0.2s; }
+    .action-btn-small:hover { background: var(--line); color: var(--brand); }
+    .action-btn-small.delete-btn:hover { background: var(--line); color: var(--danger); }
+    .edit-item-icon { color: var(--brand); }
+
+    @media (hover: none) {
+        .edit-pen, .item-actions, .tag-delete-btn { opacity: 1 !important; }
+    }
+
+    .item-attachments-wrapper { padding-left: 1.2rem; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+
+    .preview-box { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: hidden; position: relative;}
+    .preview-header { font-size: 0.75rem; padding: 6px 10px; background: var(--status-bg); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); color: var(--muted); font-weight: 500;}
+    .preview-box iframe, .preview-box img, .preview-box embed { width: 100%; height: 250px; border: none; display: block; background: #fff;}
+    .preview-box img { object-fit: contain; background: var(--status-bg); }
+    .preview-actions { display: flex; gap: 8px; flex-shrink: 0;}
+    .preview-action-btn { cursor: pointer; color: var(--muted); font-size: 1.24rem; transition: color 0.2s; padding: 4px; border-radius: 6px;}
+    .preview-action-btn:hover { color: var(--brand); background: var(--line); }
+    .preview-action-btn.delete-btn:hover { color: var(--danger); background: var(--line); }
+
+    .tags-container { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { background: var(--status-bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; font-size: .78rem; color: var(--status-text); font-weight: 500; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s; }
+    .tag-delete-btn { cursor: pointer; opacity: 0.5; color: var(--danger); transition: opacity 0.2s; margin-left: 2px; }
+    .tag:hover .tag-delete-btn { opacity: 1; }
+
+    .rt-container { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: hidden; }
+    .rt-toolbar { background: var(--status-bg); border-bottom: 1px solid var(--line); padding: 6px 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .rt-toolbar-group { display: inline-flex; align-items: center; gap: 4px; }
+    .rt-select { border: 1px solid var(--line); border-radius: 7px; padding: 6px 30px 6px 10px; font-size: 0.82rem; background-color: var(--bg); color: var(--ink); max-width: 148px; appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 15px) calc(50% - 2px), calc(100% - 10px) calc(50% - 2px); background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+    .rt-color-input { border: 1px solid var(--line); border-radius: 7px; background: var(--bg); width: 32px; height: 30px; cursor: pointer; padding: 0 2px; }
+    .rt-btn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 6px; border-radius: 6px; transition: all 0.2s; font-size: 1.1rem; }
+    .rt-btn:hover { background: var(--line); color: var(--ink); }
+    .rt-editor { padding: 10px; min-height: 120px; font-size: 0.88rem; outline: none; line-height: 1.6; }
+    .rt-editor:focus { box-shadow: inset 0 0 0 2px var(--brand-light); }
+    .rt-editor h1, .rt-editor h2, .rt-editor h3 { margin: 10px 0 6px; line-height: 1.3; }
+    .rt-editor p { margin: 6px 0; }
+    .rt-editor ul, .rt-editor ol { margin-left: 18px; }
+    .rt-editor blockquote { margin: 10px 0; border-left: 3px solid var(--brand); padding-left: 10px; color: var(--muted); }
+    .rt-editor pre { margin: 10px 0; background: var(--status-bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; overflow-x: auto; }
+    .rt-editor table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    .rt-editor th, .rt-editor td { border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; min-width: 60px; }
+    .rt-editor th { background: var(--status-bg); }
+
+    .fullscreen-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.95); z-index: 999999; justify-content: center; align-items: center; padding: 20px; }
+    .fullscreen-overlay.show { display: flex; }
+    .fullscreen-content { max-width: 95%; max-height: 95%; border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+    .close-fs { position: absolute; top: 20px; right: 30px; color: #fff; font-size: 2.5rem; cursor: pointer; transition: transform 0.2s;}
+    .close-fs:hover { transform: scale(1.1); }
+
+    .add-entry-btn { background: none; border: 1px dashed var(--line); color: var(--muted); cursor: pointer; padding: 8px 13px; border-radius: 8px; transition: all 0.2s; font-size: 0.88rem; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;}
+    .add-entry-btn:hover { background: var(--brand-light); color: var(--brand); border-color: var(--brand); }
+
+    .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); backdrop-filter: blur(4px); z-index: 100000; justify-content:center; align-items:center; padding: 20px;}
+    .modal-box { background:var(--bg); padding:2rem; border-radius:16px; width:100%; max-width: 500px; box-shadow: var(--shadow); max-height: 80vh; display: flex; flex-direction: column;}
+    .modal-box.large { max-width: 1000px; height: 90vh; }
+    .modal-title { font-size: 1.2rem; font-weight: 700; color: var(--ink); margin-bottom: 1rem; border-bottom: 1px solid var(--line); padding-bottom: 10px;}
+    .modal-btns { display:flex; justify-content: flex-end; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--line);}
+
+    .modern-input { width: 100%; padding: 10px 12px; border: 1px solid var(--status-border); border-radius: 8px; font-family: inherit; font-size: 0.95rem; color: var(--ink); background: var(--bg); outline: none; transition: all 0.2s; }
+    .modern-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-light); }
+    .modern-label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+
+    .revision-list { overflow-y: auto; flex-grow: 1; margin-bottom: 10px; }
+    .revision-item { display: flex; flex-direction: column; padding: 12px; border-bottom: 1px solid var(--line); transition: background 0.2s;}
+    .revision-item:hover { background: var(--status-bg); }
+    .revision-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .rev-date { font-weight: 500; color: var(--ink); font-size: 0.9rem; display: flex; align-items: center; flex-wrap: wrap; gap: 5px;}
+    .rev-restore-btn { background: var(--brand-light); color: var(--brand-dark); border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: background 0.2s;}
+
+    .card-detail-content { overflow-y: auto; flex-grow: 1; padding-right: 10px; }
+    .card-detail-section { margin-bottom: 25px; }
+    .card-detail-section h3 { font-size: 1rem; color: var(--brand); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; border-bottom: 1px solid var(--line); padding-bottom: 5px;}
+    .card-detail-atts { padding-left: 10px; display: flex; flex-direction: column; gap: 15px; }
+    .detail-preview-box iframe, .detail-preview-box img, .detail-preview-box embed { height: 520px; }
+    .detail-preview-box img { object-fit: contain; background: var(--status-bg); }
+    .detail-richtext { padding:15px; background:var(--bg); border:1px solid var(--line); border-radius:8px; font-size:0.95rem; line-height:1.6; }
+    .detail-richtext table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    .detail-richtext th, .detail-richtext td { border: 1px solid var(--line); padding: 8px; vertical-align: top; }
+    .detail-richtext th { background: var(--status-bg); }
+
+    .rt-fullscreen-box { max-width: 1200px; height: 92vh; display: flex; flex-direction: column; }
+    .rt-fullscreen-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .rt-editor-fullscreen { flex: 1; min-height: 60vh; font-size: 1rem; }
+
+    .global-dropdown { position: absolute; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); width: max-content; z-index: 1000; display: none; flex-direction: column; overflow: hidden; }
+    .global-dropdown.show { display: flex; }
+    .global-dropdown-item { padding: .6rem 1rem; font-size: .85rem; cursor: pointer; display: flex; align-items: center; gap: .6rem; color: var(--ink); transition: background .2s; font-weight: 500; }
+    .global-dropdown-item:hover { background: var(--brand-light); color: var(--brand); }
+
+    @media (max-width: 980px) {
+        .sop-header { min-height: 64px; padding: 12px; flex-wrap: wrap; }
+        .header-left { width: 100%; }
+        .header-right { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+        .search-wrap { width: min(260px, 100%); min-width: 180px; }
+    }
+
+    #toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 999999; }
+    .toast { background: var(--bg); border-left: 4px solid var(--brand); box-shadow: var(--shadow); padding: 12px 20px; border-radius: 8px; display: flex; align-items: center; gap: 12px; min-width: 250px; animation: slideIn 0.3s ease; color: var(--ink); font-size: 0.9rem; }
+    .toast.error { border-color: var(--danger); }
+    .toast.success { border-color: #10b981; }
+    .toast-undo-btn { margin-left: auto; background: var(--line); border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; color: var(--ink); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    @media print {
+        #toast-container, .sop-controls, .btn-save, .btn-revision,
+        .edit-pen, .item-actions, .card-actions .action-icon:not(.chevron-icon),
+        .add-entry-btn, .scroll-arrow, .sop-header button { display: none !important; }
+        .sop-card { break-inside: avoid; border: 1px solid #ccc !important; box-shadow: none !important; }
+        .sop-card.open .card-body { display: block !important; }
+        .phase-col { flex: 0 0 360px; }
+        body { background: #fff; }
+    }
+    </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<input type="file" id="global-file-input" style="display:none;">
+
+<div class="fullscreen-overlay" id="fs-overlay" onclick="closeFullscreen()">
+    <i class="ri-close-line close-fs"></i>
+    <div id="fs-container" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;"></div>
+</div>
+
+<div id="roots-sop-container">
+
+    <div id="item-add-menu" class="global-dropdown">
+        <div class="global-dropdown-item" onclick="handleItemAttach('link')"><i class="ri-link"></i> Link (Iframe) anhängen</div>
+        <div class="global-dropdown-item" onclick="handleItemAttach('file')"><i class="ri-attachment-2"></i> Datei (Upload) anhängen</div>
+        <div class="global-dropdown-item" onclick="handleItemAttach('richtext')"><i class="ri-text"></i> Textblock (formatiert)</div>
+        <div class="global-dropdown-item" onclick="handleItemAttach('tag')"><i class="ri-price-tag-3-line"></i> Tag anhängen</div>
+    </div>
+
+    <div class="roots-sop">
+      <header class="sop-header">
+        <div class="header-left">
+          <div class="logo-mark">
+            <svg viewBox="0 0 16 16" fill="none" width="16" height="16">
+              <rect x="2" y="2" width="5" height="5" rx="1.5" fill="white" opacity="0.9"/>
+              <rect x="9" y="2" width="5" height="5" rx="1.5" fill="white" opacity="0.6"/>
+              <rect x="2" y="9" width="5" height="5" rx="1.5" fill="white" opacity="0.6"/>
+              <rect x="9" y="9" width="5" height="5" rx="1.5" fill="white" opacity="0.3"/>
+            </svg>
+          </div>
+          <span class="wordmark">ROOTS <span>SOP</span></span>
+          <div class="header-divider"></div>
+          <span class="header-sub">Prozessmanagement</span>
+        </div>
+
+        <div class="header-right">
+          <div class="search-wrap">
+            <svg class="search-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
+              <circle cx="7" cy="7" r="4.5"/>
+              <path d="M10.5 10.5L13 13" stroke-linecap="round"/>
+            </svg>
+            <input type="text" class="search-bar" id="global-search" placeholder="Suchen..." oninput="filterCardsDebounced(this.value)">
+          </div>
+
+          <div class="header-sep"></div>
+
+          <div style="position:relative; display:inline-flex;">
+            <button class="btn-revision header-action-btn" title="Export" onclick="openExportMenu(this, event)">
+              <i class="ri-download-2-line"></i>
+              Export
+            </button>
+            <div id="export-menu" class="global-dropdown" style="right:0; top:calc(100% + 6px);">
+              <div class="global-dropdown-item" onclick="exportJSON()"><i class="ri-file-code-line"></i> JSON</div>
+              <div class="global-dropdown-item" onclick="exportMarkdown()"><i class="ri-markdown-line"></i> Markdown (.md)</div>
+              <div class="global-dropdown-item" onclick="exportPNG()"><i class="ri-image-line"></i> PNG Screenshot</div>
+              <div class="global-dropdown-item" onclick="exportJPEG()"><i class="ri-image-2-line"></i> JPEG Screenshot</div>
+              <div class="global-dropdown-item" onclick="exportSVG()"><i class="ri-shapes-line"></i> SVG Struktur</div>
+              <div class="global-dropdown-item" onclick="exportHTMLSnapshot()"><i class="ri-file-code-line"></i> HTML Snapshot</div>
+              <div class="global-dropdown-item" onclick="exportPrint()"><i class="ri-printer-line"></i> PDF (Drucken)</div>
+            </div>
+          </div>
+
+          <button class="btn-revision header-action-btn" title="Versionsverlauf" onclick="openRevisions()">
+            <i class="ri-history-line"></i>
+            Verlauf
+          </button>
+
+          <div class="header-sep"></div>
+
+          <span id="sync-status" class="sync-badge online" title="Online"><i class="ri-cloud-line"></i> Online</span>
+
+          <button class="btn-save header-action-btn" id="main-save-btn" onclick="saveRevisionToCloud()">
+            <i class="ri-upload-cloud-2-line"></i>
+            Speichern
+          </button>
+        </div>
+      </header>
+
+      <div id="main-board">
+         <div style="text-align:center; padding: 50px;"><i class="ri-loader-4-line ri-spin" style="font-size: 2rem; color: var(--brand);"></i></div>
+      </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="save-modal">
+    <div class="modal-box" style="max-width: 450px;">
+        <div class="modal-title"><i class="ri-user-line"></i> Version in Cloud speichern</div>
+        <div style="margin-bottom: 20px;">
+            <label class="modern-label">Dein Name / Kürzel</label>
+            <input type="text" id="modal-author-name" class="modern-input" placeholder="Wer hat diese Änderungen gemacht?">
+        </div>
+        <div class="modal-btns">
+            <button class="btn-revision" onclick="closeModal('save-modal')">Abbrechen</button>
+            <button class="btn-save" onclick="confirmSaveRevision()">Speichern</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="revision-modal">
+    <div class="modal-box">
+        <div class="modal-title"><i class="ri-history-line"></i> Cloud Versionsverlauf</div>
+        <div class="revision-list" id="revision-list"></div>
+        <div class="modal-btns">
+            <button class="btn-revision" onclick="closeModal('revision-modal')">Schließen</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="tag-modal">
+    <div class="modal-box" style="max-width: 400px;">
+        <div class="modal-title"><i class="ri-price-tag-3-line"></i> Tag hinzufügen</div>
+        <div style="margin-bottom: 20px;">
+            <label class="modern-label">Tag Name</label>
+            <input type="text" id="modal-tag-name" class="modern-input" placeholder="Z.B. Priorität, Review, Draft...">
+        </div>
+        <div class="modal-btns" style="margin-top:0;">
+            <button class="btn-revision" onclick="document.getElementById('tag-modal').style.display='none'">Abbrechen</button>
+            <button class="btn-save" onclick="confirmTagAdd()">Hinzufügen</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="link-modal">
+    <div class="modal-box" style="max-width: 450px;">
+        <div class="modal-title"><i class="ri-link"></i> Link hinzufügen</div>
+        <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+            <div>
+                <label class="modern-label">URL-Adresse</label>
+                <input type="url" id="modal-link-url" class="modern-input" value="https://">
+            </div>
+            <div>
+                <label class="modern-label">Anzeigename</label>
+                <input type="text" id="modal-link-name" class="modern-input" placeholder="Z.B. Google, Figma Board, etc...">
+            </div>
+        </div>
+        <div class="modal-btns" style="margin-top:0;">
+            <button class="btn-revision" onclick="document.getElementById('link-modal').style.display='none'">Abbrechen</button>
+            <button class="btn-save" onclick="confirmLinkAdd()">Hinzufügen</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="card-detail-modal">
+    <div class="modal-box large">
+        <div class="modal-title" id="card-detail-title" style="font-size: 1.5rem;">Karten-Details</div>
+        <div class="card-detail-content" id="card-detail-body"></div>
+        <div class="modal-btns">
+            <button class="btn-save" onclick="closeModal('card-detail-modal')">Schließen</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="rt-fullscreen-modal" onclick="if(event.target===this) closeRichTextFullscreen()">
+    <div class="modal-box large rt-fullscreen-box">
+        <div class="modal-title"><i class="ri-text"></i> Textblock Vollbild bearbeiten</div>
+        <div class="rt-container rt-fullscreen-wrap">
+            <div class="rt-toolbar" id="rt-fullscreen-toolbar"></div>
+            <div class="rt-editor rt-editor-fullscreen" id="rt-fullscreen-editor" contenteditable="true" oninput="syncRichTextFullscreen()"></div>
+        </div>
+        <div class="modal-btns">
+            <button class="btn-save" onclick="closeRichTextFullscreen()">Fertig</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="rt-link-modal">
+    <div class="modal-box" style="max-width: 460px;">
+        <div class="modal-title"><i class="ri-link"></i> Link einfügen</div>
+        <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:16px;">
+            <div>
+                <label class="modern-label">URL</label>
+                <input type="url" id="rt-link-input" class="modern-input" placeholder="https://beispiel.de">
+            </div>
+        </div>
+        <div class="modal-btns">
+            <button class="btn-revision" onclick="closeModal('rt-link-modal')">Abbrechen</button>
+            <button class="btn-save" onclick="confirmRichTextLink()">Einfügen</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="rt-table-modal">
+    <div class="modal-box" style="max-width: 460px;">
+        <div class="modal-title"><i class="ri-table-line"></i> Tabelle einfügen</div>
+        <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:16px;">
+            <div>
+                <label class="modern-label">Zeilen</label>
+                <input type="number" id="rt-table-rows" class="modern-input" min="1" max="12" value="3">
+            </div>
+            <div>
+                <label class="modern-label">Spalten</label>
+                <input type="number" id="rt-table-cols" class="modern-input" min="1" max="8" value="3">
+            </div>
+        </div>
+        <div class="modal-btns">
+            <button class="btn-revision" onclick="closeModal('rt-table-modal')">Abbrechen</button>
+            <button class="btn-save" onclick="confirmRichTextTable()">Einfügen</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
