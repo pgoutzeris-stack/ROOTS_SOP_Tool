@@ -1272,8 +1272,6 @@ function sizeReadPreviewHeights() {
 function refreshReadModeView() {
     const data = serializeBoardFromDOM();
     const steps = getReadModeSteps();
-    const elBc = document.getElementById('read-mode-breadcrumb');
-    const elT = document.getElementById('read-mode-title');
     const elP = document.getElementById('read-mode-progress');
     const elBody = document.getElementById('read-mode-body');
     const trackTabs = document.getElementById('read-track-tabs');
@@ -1282,9 +1280,7 @@ function refreshReadModeView() {
     const nextBtn = document.getElementById('read-mode-next');
     if (!elBody) return;
     if (steps.length === 0) {
-        if (elBc) elBc.textContent = 'Kein Ablauf';
-        if (elT) elT.textContent = '—';
-        if (elP) elP.textContent = '0 / 0';
+        if (elP) { elP.textContent = '—'; elP.setAttribute('title', ''); }
         if (trackTabs) trackTabs.innerHTML = '';
         if (phaseTabs) phaseTabs.innerHTML = '';
         elBody.innerHTML = '<p class="read-empty" style="text-align:center; color:var(--muted); padding:2.5rem 1rem;">Noch kein SOP-Inhalt – wechsle in den Bearbeiten-Modus.</p>';
@@ -1295,9 +1291,12 @@ function refreshReadModeView() {
     if (readModeIndex >= steps.length) readModeIndex = steps.length - 1;
     if (readModeIndex < 0) readModeIndex = 0;
     const step = steps[readModeIndex];
-    if (elBc) elBc.textContent = `${step.trackTitle} · ${step.phaseName}`;
-    if (elT) elT.textContent = step.phaseName;
-    if (elP) elP.textContent = `Schritt ${readModeIndex + 1} von ${steps.length}`;
+    if (elP) {
+        const cur = readModeIndex + 1;
+        const tot = steps.length;
+        elP.textContent = `${cur} / ${tot}`;
+        elP.setAttribute('title', `Schritt ${cur} von ${tot}`);
+    }
 
     if (trackTabs && data && data.length) {
         trackTabs.innerHTML = '';
