@@ -18,11 +18,11 @@ function createBlobUrl(base64Data, mimeType) {
 const createCardData = (title) => ({
     title: title,
     sections: [
-        { name: "Ziel", icon: "ri-focus-2-line", items: [{text: "Ziel hier definieren...", attachments: []}] },
-        { name: "Subschritte", icon: "ri-list-check", items: [{text: "Erster Schritt...", attachments: []}] },
-        { name: "Assets", icon: "ri-file-list-3-line", items: [] },
-        { name: "Tools, Templates & Frameworks", icon: "ri-tools-line", items: [] },
-        { name: "Erfolgreich wenn", icon: "ri-checkbox-circle-line", items: [{text: "Erfolgskriterium definieren...", attachments: []}] }
+        { name: "Ziel", icon: "fa-solid fa-bullseye", items: [{text: "Ziel hier definieren...", attachments: []}] },
+        { name: "Subschritte", icon: "fa-solid fa-list-check", items: [{text: "Erster Schritt...", attachments: []}] },
+        { name: "Assets", icon: "fa-solid fa-file-lines", items: [] },
+        { name: "Tools, Templates & Frameworks", icon: "fa-solid fa-screwdriver-wrench", items: [] },
+        { name: "Erfolgreich wenn", icon: "fa-solid fa-circle-check", items: [{text: "Erfolgskriterium definieren...", attachments: []}] }
     ]
 });
 
@@ -61,6 +61,8 @@ let activeRichTextEditor = null;
 let pendingRichTextControl = null;
 let searchDebounceTimer = null;
 let activeInlineEdit = null;
+let sopViewMode = 'edit';
+let readModeIndex = 0;
 
 // --- TOAST SYSTEM ---
 function showToast(message, type = 'info', undoCallback = null) {
@@ -119,6 +121,13 @@ async function initDashboard() {
     document.addEventListener('keydown', handleGlobalKeydown);
     checkOnboarding();
     setInterval(pollForChanges, 30000);
+
+    const readBtn = document.getElementById('sop-mode-read-btn');
+    const editBtn = document.getElementById('sop-mode-edit-btn');
+    if (readBtn) readBtn.addEventListener('click', () => setSopViewMode('read'));
+    if (editBtn) editBtn.addEventListener('click', () => setSopViewMode('edit'));
+    document.getElementById('read-mode-prev')?.addEventListener('click', readModePrev);
+    document.getElementById('read-mode-next')?.addEventListener('click', readModeNext);
 }
 
 function setOnlineStatus(online) {
@@ -170,12 +179,21 @@ function handleGlobalKeydown(e) {
         if (richTextModal && richTextModal.style.display === 'flex') { closeRichTextFullscreen(); return; }
         const fsOverlay = document.getElementById('fs-overlay');
         if (fsOverlay.classList.contains('show')) { closeFullscreen(); return; }
+        if (document.body.classList.contains('sop-mode-read')) { setSopViewMode('edit'); return; }
         const visibleModal = document.querySelector('.modal-overlay[style*="display: flex"]');
         if (visibleModal) { closeModal(visibleModal.id); return; }
         if (activeInlineEdit) { finishInlineEdit(activeInlineEdit.icon, activeInlineEdit.target, false); return; }
         document.getElementById('item-add-menu').classList.remove('show');
         const exportMenu = document.getElementById('export-menu');
         if (exportMenu) exportMenu.classList.remove('show');
+    }
+
+    if (document.body.classList.contains('sop-mode-read') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
+        e.preventDefault();
+        if (e.key === 'ArrowLeft') readModePrev();
+        else readModeNext();
+        return;
     }
 
     if (e.key === 'Enter') {
@@ -221,8 +239,8 @@ function finishInlineEdit(el, target, save = true) {
     if (!save && target.dataset.originalText !== undefined) target.innerText = target.dataset.originalText;
     delete target.dataset.originalText;
     target.contentEditable = "false";
-    el.classList.remove('ri-save-line');
-    el.classList.add('ri-pencil-line');
+    el.classList.remove('fa-check');
+    el.classList.add('fa-pen');
     if (activeInlineEdit && activeInlineEdit.target === target) activeInlineEdit = null;
     saveToLocal();
 }
@@ -238,8 +256,8 @@ function startInlineEdit(el, target, maxLength = 500) {
     range.selectNodeContents(target);
     selection.removeAllRanges();
     selection.addRange(range);
-    el.classList.remove('ri-pencil-line');
-    el.classList.add('ri-save-line');
+    el.classList.remove('fa-pen');
+    el.classList.add('fa-check');
     const inputHandler = function() {
         if (this.innerText.length > maxLength) {
             this.innerText = this.innerText.substring(0, maxLength);
@@ -271,7 +289,7 @@ function makeEditable(el, event, maxLength = 500) {
     const target = getEditableTarget(el);
     if (!target) return;
     el._editTarget = target;
-    if (target.contentEditable === "true" || el.classList.contains('ri-save-line')) {
+    if (target.contentEditable === "true" || el.classList.contains('fa-check')) {
         finishInlineEdit(el, target, true);
         target.blur();
         return;
@@ -331,8 +349,8 @@ function confirmTagAdd() {
     currentAttachWrapper.insertAdjacentHTML('beforeend',
         `<span class="attachment-item tag" data-type="tag" data-name="${name}">
             <span class="edit-target">${name}</span>
-            <i class="ri-pencil-line edit-pen" onclick="makeEditable(this, event)"></i>
-            <i class="ri-close-line tag-delete-btn" onclick="softDelete(this.closest('.tag'), 'Tag')"></i>
+            <i class="fa-solid fa-pen edit-pen" onclick="makeEditable(this, event)"></i>
+            <i class="fa-solid fa-xmark tag-delete-btn" onclick="softDelete(this.closest('.tag'), 'Tag')"></i>
         </span>`
     );
     document.getElementById('tag-modal').style.display = 'none';
@@ -345,6 +363,43 @@ function escapeHtml(value = '') {
 
 function escapeAttr(value = '') {
     return escapeHtml(value).replace(/`/g, '&#96;');
+}
+
+function plainTextFromRichHtml(html, max) {
+    const d = document.createElement('div');
+    d.innerHTML = sanitizeRichTextHTML(html || '');
+    const t = (d.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!max) return t;
+    if (t.length <= max) return t;
+    return t.slice(0, max) + '…';
+}
+
+function buildCompactLinkHtml(url, name) {
+    return `<div class="attachment-item attachment-compact attachment-link preview-box" data-type="link" data-url="${escapeAttr(url)}" data-name="${escapeAttr(name)}">
+    <div class="attachment-compact-main"><i class="fa-solid fa-link" style="color:var(--brand);"></i> <a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" style="font-weight:600;">${escapeHtml(name)}</a>
+    <span style="color:var(--muted); font-size:0.78rem; display:block; margin-top:2px; word-break:break-all;">${escapeHtml(url)}</span>
+    </div>
+    <div class="attachment-compact-actions">
+        <button type="button" class="ac-btn" title="Vollbild" aria-label="Vollbild" onclick="openFullscreenFromDOM(this)" data-mime="link" data-url="${escapeAttr(url)}"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i></button>
+        <button type="button" class="ac-btn danger" title="Entfernen" aria-label="Entfernen" onclick="softDelete(this.closest('.attachment-item'), 'Link')"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+    </div>
+</div>`;
+}
+
+function buildCompactFileHtml(name, base64Data, mime) {
+    const isViewable = String(mime || '').startsWith('image/') || mime === 'application/pdf';
+    return `<div class="attachment-item attachment-compact preview-box" data-type="file" data-name="${escapeAttr(name)}" data-mime="${escapeAttr(mime || '')}">
+        <textarea class="hidden-base64-data" style="display:none;">${base64Data}</textarea>
+        <div class="attachment-compact-main">
+            <i class="fa-solid fa-file" style="color:var(--brand);"></i>
+            <span style="font-weight:600; word-break:break-word;">${escapeHtml(name)}</span>
+            <span style="color:var(--muted); font-size:0.78rem;">${escapeHtml(mime || 'Datei')}</span>
+        </div>
+        <div class="attachment-compact-actions">
+            ${isViewable ? `<button type="button" class="ac-btn" title="Vollbild" aria-label="Vollbild" onclick="openFullscreenFromDOM(this)" data-mime="${escapeAttr(mime || '')}"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i></button>` : ''}
+            <button type="button" class="ac-btn danger" title="Entfernen" aria-label="Entfernen" onclick="softDelete(this.closest('.attachment-item'), 'Datei')"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+        </div>
+    </div>`;
 }
 
 function sanitizeRichTextLink(href = '') {
@@ -511,10 +566,10 @@ function insertRichTextCodeBlock(control) {
 
 function buildRichTextToolbar(includeDelete = true, includeFullscreen = true) {
     const deleteBtn = includeDelete
-        ? `<button class="rt-btn" onmousedown="event.preventDefault()" style="color:var(--danger);" onclick="softDelete(this.closest('.rt-container'), 'Textblock')" title="Textblock löschen"><i class="ri-delete-bin-line"></i></button>`
+        ? `<button class="rt-btn" onmousedown="event.preventDefault()" style="color:var(--danger);" onclick="softDelete(this.closest('.rt-container'), 'Textblock')" title="Textblock löschen"><i class="fa-solid fa-trash"></i></button>`
         : '';
     const fullscreenBtn = includeFullscreen
-        ? `<button class="rt-btn" onmousedown="event.preventDefault()" onclick="openRichTextFullscreen(this)" title="Vollbild bearbeiten"><i class="ri-fullscreen-line"></i></button>`
+        ? `<button class="rt-btn" onmousedown="event.preventDefault()" onclick="openRichTextFullscreen(this)" title="Vollbild bearbeiten"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>`
         : '';
     return `
         <div class="rt-toolbar-group">
@@ -527,33 +582,33 @@ function buildRichTextToolbar(includeDelete = true, includeFullscreen = true) {
             </select>
         </div>
         <div class="rt-toolbar-group">
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'undo')" title="Rückgängig"><i class="ri-arrow-go-back-line"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'redo')" title="Wiederholen"><i class="ri-arrow-go-forward-line"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'bold')" title="Fett"><i class="ri-bold"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'italic')" title="Kursiv"><i class="ri-italic"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'underline')" title="Unterstrichen"><i class="ri-underline"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'strikeThrough')" title="Durchgestrichen"><i class="ri-strikethrough"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'undo')" title="Rückgängig"><i class="fa-solid fa-rotate-left"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'redo')" title="Wiederholen"><i class="fa-solid fa-rotate-right"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'bold')" title="Fett"><i class="fa-solid fa-bold"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'italic')" title="Kursiv"><i class="fa-solid fa-italic"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'underline')" title="Unterstrichen"><i class="fa-solid fa-underline"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'strikeThrough')" title="Durchgestrichen"><i class="fa-solid fa-strikethrough"></i></button>
         </div>
         <div class="rt-toolbar-group">
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'insertUnorderedList')" title="Aufzählung"><i class="ri-list-unordered"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'insertOrderedList')" title="Nummerierte Liste"><i class="ri-list-ordered"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'outdent')" title="Ausrückung verringern"><i class="ri-indent-decrease"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'indent')" title="Ausrückung erhöhen"><i class="ri-indent-increase"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'insertUnorderedList')" title="Aufzählung"><i class="fa-solid fa-list-ul"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'insertOrderedList')" title="Nummerierte Liste"><i class="fa-solid fa-list-ol"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'outdent')" title="Ausrückung verringern"><i class="fa-solid fa-outdent"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'indent')" title="Ausrückung erhöhen"><i class="fa-solid fa-indent"></i></button>
         </div>
         <div class="rt-toolbar-group">
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'justifyLeft')" title="Linksbündig"><i class="ri-align-left"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'justifyCenter')" title="Zentriert"><i class="ri-align-center"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'justifyRight')" title="Rechtsbündig"><i class="ri-align-right"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'justifyFull')" title="Blocksatz"><i class="ri-align-justify"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'justifyLeft')" title="Linksbündig"><i class="fa-solid fa-align-left"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'justifyCenter')" title="Zentriert"><i class="fa-solid fa-align-center"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'justifyRight')" title="Rechtsbündig"><i class="fa-solid fa-align-right"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'justifyFull')" title="Blocksatz"><i class="fa-solid fa-align-justify"></i></button>
         </div>
         <div class="rt-toolbar-group">
             <input type="color" class="rt-color-input" title="Textfarbe" value="#1f2937" onchange="applyRichTextColor(this, 'foreColor')">
             <input type="color" class="rt-color-input" title="Hintergrundfarbe" value="#fff59d" onchange="applyRichTextColor(this, 'hiliteColor')">
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="insertRichTextLink(this)" title="Link einfügen"><i class="ri-link"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="insertRichTextTable(this)" title="Tabelle einfügen"><i class="ri-table-line"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="insertRichTextCodeBlock(this)" title="Codeblock einfügen"><i class="ri-code-s-slash-line"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'insertHorizontalRule')" title="Trennlinie"><i class="ri-subtract-line"></i></button>
-            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'removeFormat')" title="Formatierung entfernen"><i class="ri-format-clear"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="insertRichTextLink(this)" title="Link einfügen"><i class="fa-solid fa-link"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="insertRichTextTable(this)" title="Tabelle einfügen"><i class="fa-solid fa-table"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="insertRichTextCodeBlock(this)" title="Codeblock einfügen"><i class="fa-solid fa-code"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'insertHorizontalRule')" title="Trennlinie"><i class="fa-solid fa-minus"></i></button>
+            <button class="rt-btn" onmousedown="event.preventDefault()" onclick="runRichTextCommand(this, 'removeFormat')" title="Formatierung entfernen"><i class="fa-solid fa-eraser"></i></button>
         </div>
         <div style="flex:1 1 auto;"></div>
         <div class="rt-toolbar-group">${fullscreenBtn}${deleteBtn}</div>
@@ -561,9 +616,12 @@ function buildRichTextToolbar(includeDelete = true, includeFullscreen = true) {
 }
 
 function renderRichTextAttachment(html = 'Text hier eingeben...') {
-    return `<div class="attachment-item rt-container" data-type="richtext">
+    const safe = sanitizeRichTextHTML(html);
+    const hint = plainTextFromRichHtml(html, 200);
+    return `<div class="attachment-item rt-container rt-container-compact" data-type="richtext">
+        <div class="rt-compact-hint"><i class="fa-solid fa-align-left" style="color:var(--brand); margin-right:6px;" aria-hidden="true"></i><span>${escapeHtml(hint || 'Formatierter Text – Inhalt in der Karte unten bearbeiten')}</span></div>
         <div class="rt-toolbar">${buildRichTextToolbar(true, true)}</div>
-        <div class="rt-editor" contenteditable="true">${sanitizeRichTextHTML(html)}</div>
+        <div class="rt-editor" contenteditable="true">${safe}</div>
     </div>`;
 }
 
@@ -783,17 +841,17 @@ function renderBoard(data) {
     const container = document.getElementById('main-board');
     container.innerHTML = '';
     data.forEach((track, tIdx) => {
-        let trackHtml = `<div class="track ${track.class}"><div class="track-header"><div class="track-badge">Track ${tIdx + 1}</div><div class="track-name edit-wrap"><span class="edit-target">${track.title}</span><i class="ri-pencil-line edit-pen" onclick="makeEditable(this, event, 100)"></i></div></div>
+        let trackHtml = `<div class="track ${track.class}"><div class="track-header"><div class="track-badge">Track ${tIdx + 1}</div><div class="track-name edit-wrap"><span class="edit-target">${track.title}</span><i class="fa-solid fa-pen edit-pen" onclick="makeEditable(this, event, 100)"></i></div></div>
         <div class="phases-wrapper">
-            <div class="scroll-arrow left" onclick="scrollRow(this, -300)"><i class="ri-arrow-left-s-line"></i></div>
+            <div class="scroll-arrow left" onclick="scrollRow(this, -300)"><i class="fa-solid fa-chevron-left"></i></div>
             <div class="phases-row" onscroll="updateScrollArrows(this)">`;
         if(track.phases) {
             track.phases.forEach((phase) => {
-                trackHtml += `<div class="phase-col"><div class="phase-label edit-wrap"><span class="edit-target" title="${phase.name}">${phase.name}</span><i class="ri-pencil-line edit-pen" onclick="makeEditable(this, event, 40)"></i></div><div class="phase-cards">${renderCards(phase.cards)}<button class="add-entry-btn" onclick="addCard(this)"><i class="ri-add-line"></i> Neue Karte</button></div></div>`;
+                trackHtml += `<div class="phase-col"><div class="phase-label edit-wrap"><span class="edit-target" title="${phase.name}">${phase.name}</span><i class="fa-solid fa-pen edit-pen" onclick="makeEditable(this, event, 40)"></i></div><div class="phase-cards">${renderCards(phase.cards)}<button class="add-entry-btn" onclick="addCard(this)"><i class="fa-solid fa-plus"></i> Neue Karte</button></div></div>`;
             });
         }
-        trackHtml += `<div class="phase-col add-phase-col" style="justify-content:center; align-items:center; min-width: 200px; padding: 20px;"><button class="add-entry-btn" onclick="addPhase(this)"><i class="ri-add-line"></i> Phase hinzufügen</button></div>`;
-        trackHtml += `</div><div class="scroll-arrow right" onclick="scrollRow(this, 300)"><i class="ri-arrow-right-s-line"></i></div></div></div>`;
+        trackHtml += `<div class="phase-col add-phase-col" style="justify-content:center; align-items:center; min-width: 200px; padding: 20px;"><button class="add-entry-btn" onclick="addPhase(this)"><i class="fa-solid fa-plus"></i> Phase hinzufügen</button></div>`;
+        trackHtml += `</div><div class="scroll-arrow right" onclick="scrollRow(this, 300)"><i class="fa-solid fa-chevron-right"></i></div></div></div>`;
         container.insertAdjacentHTML('beforeend', trackHtml);
     });
     updateCardMetaChips();
@@ -830,36 +888,21 @@ function renderCards(cardsArray) {
             let itemsHtml = sec.items.map(subItem => {
                 let atts = (subItem.attachments || []).map(att => {
                     if (att.type === 'link') {
-                        return `<div class="attachment-item preview-box" data-type="link" data-url="${att.url}" data-name="${att.name}">
-                            <div class="preview-header"><span><i class="ri-global-line"></i> <a href="${att.url}" target="_blank" style="color:inherit;text-decoration:none;">${att.name}</a></span>
-                            <div class="preview-actions"><i class="ri-fullscreen-line preview-action-btn" onclick="openFullscreenFromDOM(this)" data-url="${att.url}" data-mime="link"></i><i class="ri-delete-bin-line preview-action-btn delete-btn" onclick="softDelete(this.closest('.attachment-item'), 'Link')"></i></div></div>
-                            <iframe src="${att.url}" loading="lazy" onload="iframeLoaded(this)" onerror="showIframeFallback(this)"></iframe>
-                            <div class="iframe-fallback" style="display:none; padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;"><i class="ri-lock-line" style="font-size:2rem; display:block; margin-bottom:8px;"></i>Diese Seite erlaubt keine Einbettung.<br><a href="${att.url}" target="_blank" style="color:var(--brand);">Im neuen Tab öffnen →</a></div>
-                        </div>`;
+                        return buildCompactLinkHtml(att.url, att.name);
                     } else if (att.type === 'file') {
-                        let isViewable = att.mime.startsWith('image/') || att.mime === 'application/pdf';
-                        let fsBtn = isViewable ? `<i class="ri-fullscreen-line preview-action-btn" onclick="openFullscreenFromDOM(this)" data-mime="${att.mime}"></i>` : '';
-                        let displayUrl = (att.mime === 'application/pdf') ? createBlobUrl(att.data, att.mime) : att.data;
-                        let content;
-                        if (att.mime.startsWith('image/')) content = `<img src="${displayUrl}">`;
-                        else if (att.mime === 'application/pdf') content = `<embed src="${displayUrl}" type="application/pdf" height="250px" width="100%"></embed>`;
-                        else content = `<div style="padding:20px;text-align:center;color:var(--muted);"><i class="ri-file-line" style="font-size:2rem;"></i><br>Keine Vorschau verfügbar</div>`;
-                        return `<div class="attachment-item preview-box" data-type="file" data-name="${att.name}" data-mime="${att.mime}">
-                            <textarea class="hidden-base64-data" style="display:none;">${att.data}</textarea>
-                            <div class="preview-header"><span><i class="ri-attachment-2"></i> ${att.name}</span><div class="preview-actions">${fsBtn}<i class="ri-delete-bin-line preview-action-btn delete-btn" onclick="softDelete(this.closest('.attachment-item'), 'Datei')"></i></div></div>${content}
-                        </div>`;
+                        return buildCompactFileHtml(att.name, att.data, att.mime);
                     } else if (att.type === 'tag') {
-                        return `<span class="attachment-item tag" data-type="tag" data-name="${att.name}"><span class="edit-target">${att.name}</span><i class="ri-pencil-line edit-pen" onclick="makeEditable(this, event)"></i><i class="ri-close-line tag-delete-btn" onclick="softDelete(this.closest('.tag'), 'Tag')"></i></span>`;
+                        return `<span class="attachment-item tag" data-type="tag" data-name="${att.name}"><span class="edit-target">${att.name}</span><i class="fa-solid fa-pen edit-pen" onclick="makeEditable(this, event)"></i><i class="fa-solid fa-xmark tag-delete-btn" onclick="softDelete(this.closest('.tag'), 'Tag')"></i></span>`;
                     } else if (att.type === 'richtext') {
                         return renderRichTextAttachment(att.html);
                     }
                     return '';
                 }).join('');
-                return `<li class="item-container"><div class="item-row"><div class="edit-wrap"><span class="edit-target">${subItem.text}</span></div><div class="item-actions"><i class="ri-pencil-line action-btn-small edit-item-icon" onclick="makeEditable(this, event, 500)" data-edit-selector=".edit-target" data-edit-scope=".item-row"></i><i class="ri-add-line action-btn-small" onclick="openItemMenu(this, event)"></i><i class="ri-delete-bin-line action-btn-small delete-btn" onclick="softDelete(this.closest('.item-container'), 'Eintrag')"></i></div></div><div class="item-attachments-wrapper tags-container">${atts}</div></li>`;
+                return `<li class="item-container"><div class="item-row"><div class="edit-wrap"><span class="edit-target">${subItem.text}</span></div><div class="item-actions"><i class="fa-solid fa-pen action-btn-small edit-item-icon" onclick="makeEditable(this, event, 500)" data-edit-selector=".edit-target" data-edit-scope=".item-row"></i><i class="fa-solid fa-plus action-btn-small" onclick="openItemMenu(this, event)"></i><i class="fa-solid fa-trash action-btn-small delete-btn" onclick="softDelete(this.closest('.item-container'), 'Eintrag')"></i></div></div><div class="item-attachments-wrapper tags-container">${atts}</div></li>`;
             }).join('');
-            return `<div class="field" data-section-name="${sec.name}" data-section-icon="${sec.icon}"><div class="field-label"><div class="field-header-flex"><span><i class="${sec.icon} main-icon"></i> ${sec.name} <span class="item-count">${sec.items.length}</span></span><button class="add-entry-btn" style="width:auto; padding:0px 4px; color:var(--brand); border:none;" onclick="addListItem(this)"><i class="ri-add-line"></i></button></div></div><div class="field-content"><ul class="section-item-list">${itemsHtml}</ul></div></div>`;
+            return `<div class="field" data-section-name="${sec.name}" data-section-icon="${sec.icon}"><div class="field-label"><div class="field-header-flex"><span><i class="${sec.icon} main-icon" aria-hidden="true"></i> ${sec.name} <span class="item-count">${sec.items.length}</span></span><button class="add-entry-btn" style="width:auto; padding:0px 4px; color:var(--brand); border:none;" onclick="addListItem(this)"><i class="fa-solid fa-plus"></i></button></div></div><div class="field-content"><ul class="section-item-list">${itemsHtml}</ul></div></div>`;
         }).join('');
-        return `<div class="sop-card"><div class="card-trigger" onclick="this.parentElement.classList.toggle('open')"><div class="card-header-main"><div class="card-title-wrap"><div class="card-title"><span class="edit-target">${cardObj.title}</span></div></div><div class="card-actions"><i class="ri-pencil-line action-icon edit-title-icon" onclick="makeEditable(this, event, 80)" data-edit-selector=".card-title .edit-target" data-edit-scope=".sop-card" title="Titel bearbeiten"></i><i class="ri-external-link-line action-icon" style="color: var(--brand);" onclick="openCardDetails(this, event)" title="Großansicht"></i><i class="ri-delete-bin-line action-icon" style="color: var(--danger);" onclick="deleteCard(this, event)" title="Karte löschen"></i><i class="ri-arrow-down-s-line action-icon chevron-icon"></i></div></div><div class="card-meta-chips"></div></div><div class="card-body">${sectionsHtml}</div></div>`;
+        return `<div class="sop-card"><div class="card-trigger" onclick="this.parentElement.classList.toggle('open')"><div class="card-header-main"><div class="card-title-wrap"><div class="card-title"><span class="edit-target">${cardObj.title}</span></div></div><div class="card-actions"><i class="fa-solid fa-pen action-icon edit-title-icon" onclick="makeEditable(this, event, 80)" data-edit-selector=".card-title .edit-target" data-edit-scope=".sop-card" title="Titel bearbeiten"></i><i class="fa-solid fa-up-right-and-down-left-from-center action-icon" style="color: var(--brand);" onclick="openCardDetails(this, event)" title="Großansicht"></i><i class="fa-solid fa-trash action-icon" style="color: var(--danger);" onclick="deleteCard(this, event)" title="Karte löschen"></i><i class="fa-solid fa-chevron-down action-icon chevron-icon"></i></div></div><div class="card-meta-chips"></div></div><div class="card-body">${sectionsHtml}</div></div>`;
     }).join('');
 }
 
@@ -868,18 +911,18 @@ function renderCardDetailAttachment(att) {
     if (type === 'link') {
         const url = att.dataset.url || '';
         const rawName = att.dataset.name || url;
-        return `<div class="preview-box detail-preview-box" data-type="link" data-url="${escapeAttr(url)}" data-name="${escapeAttr(rawName)}"><div class="preview-header"><span><i class="ri-global-line"></i> <a href="${url}" target="_blank" style="color:inherit;text-decoration:none;">${escapeHtml(rawName)}</a></span></div><iframe src="${url}" loading="lazy" onload="iframeLoaded(this)" onerror="showIframeFallback(this)"></iframe><div class="iframe-fallback" style="display:none; padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;"><i class="ri-lock-line" style="font-size:2rem; display:block; margin-bottom:8px;"></i>Diese Seite erlaubt keine Einbettung.<br><a href="${url}" target="_blank" style="color:var(--brand);">Im neuen Tab öffnen →</a></div></div>`;
+        return `<div class="preview-box detail-preview-box" data-type="link" data-url="${escapeAttr(url)}" data-name="${escapeAttr(rawName)}"><div class="preview-header"><span><i class="fa-solid fa-link"></i> <a href="${url}" target="_blank" style="color:inherit;text-decoration:none;">${escapeHtml(rawName)}</a></span></div><iframe src="${url}" loading="lazy" onload="iframeLoaded(this)" onerror="showIframeFallback(this)"></iframe><div class="iframe-fallback" style="display:none; padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;"><i class="fa-solid fa-shield-halved" style="font-size:2rem; display:block; margin-bottom:8px;"></i>Diese Seite erlaubt keine Einbettung.<br><a href="${url}" target="_blank" style="color:var(--brand);">Im neuen Tab öffnen →</a></div></div>`;
     }
     if (type === 'file') {
         const mime = att.dataset.mime || '';
         const name = escapeHtml(att.dataset.name || 'Datei');
         const base64 = att.querySelector('.hidden-base64-data') ? att.querySelector('.hidden-base64-data').value : att.dataset.filedata;
         const displayUrl = (mime === 'application/pdf') ? createBlobUrl(base64 || '', mime) : (base64 || '');
-        if (mime.startsWith('image/')) return `<div class="preview-box detail-preview-box"><div class="preview-header"><span><i class="ri-image-line"></i> ${name}</span></div><img src="${displayUrl}" alt="${name}"></div>`;
-        if (mime === 'application/pdf') return `<div class="preview-box detail-preview-box"><div class="preview-header"><span><i class="ri-file-pdf-line"></i> ${name}</span></div><embed src="${displayUrl}" type="application/pdf"></embed></div>`;
-        return `<div class="preview-box detail-preview-box"><div class="preview-header"><span><i class="ri-file-line"></i> ${name}</span></div><iframe src="${displayUrl}" loading="lazy"></iframe></div>`;
+        if (mime.startsWith('image/')) return `<div class="preview-box detail-preview-box"><div class="preview-header"><span><i class="fa-solid fa-image"></i> ${name}</span></div><img src="${displayUrl}" alt="${name}"></div>`;
+        if (mime === 'application/pdf') return `<div class="preview-box detail-preview-box"><div class="preview-header"><span><i class="fa-solid fa-file-pdf"></i> ${name}</span></div><embed src="${displayUrl}" type="application/pdf"></embed></div>`;
+        return `<div class="preview-box detail-preview-box"><div class="preview-header"><span><i class="fa-solid fa-file"></i> ${name}</span></div><iframe src="${displayUrl}" loading="lazy"></iframe></div>`;
     }
-    if (type === 'tag') return `<span style="background:var(--status-bg); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:0.8rem; width:fit-content; color:var(--status-text);"><i class="ri-price-tag-3-line"></i> ${escapeHtml(att.dataset.name || '')}</span>`;
+    if (type === 'tag') return `<span style="background:var(--status-bg); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:0.8rem; width:fit-content; color:var(--status-text);"><i class="fa-solid fa-tag"></i> ${escapeHtml(att.dataset.name || '')}</span>`;
     if (type === 'richtext') {
         const rich = att.querySelector('.rt-editor');
         return `<div class="detail-richtext">${sanitizeRichTextHTML(rich ? rich.innerHTML : '')}</div>`;
@@ -891,7 +934,7 @@ function openCardDetails(btn, event) {
     event.stopPropagation();
     const card = btn.closest('.sop-card');
     const title = card.querySelector('.card-title .edit-target').innerText;
-    document.getElementById('card-detail-title').innerHTML = `<i class="ri-external-link-line"></i> ${escapeHtml(title)}`;
+    document.getElementById('card-detail-title').innerHTML = `<i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i> ${escapeHtml(title)}`;
     let bodyHtml = '';
     card.querySelectorAll('.field').forEach(fieldEl => {
         const secName = fieldEl.dataset.sectionName;
@@ -942,11 +985,7 @@ function confirmLinkAdd() {
     if (!url || url === 'https://') { showToast("Bitte eine gültige URL eingeben.", "error"); return; }
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
     if (!name) name = url;
-    const html = `<div class="attachment-item preview-box" data-type="link" data-url="${url}" data-name="${name}">
-        <div class="preview-header"><span><i class="ri-global-line"></i> <a href="${url}" target="_blank" style="color:inherit;text-decoration:none;">${name}</a></span><div class="preview-actions"><i class="ri-fullscreen-line preview-action-btn" onclick="openFullscreenFromDOM(this)" data-url="${url}" data-mime="link"></i><i class="ri-delete-bin-line preview-action-btn delete-btn" onclick="softDelete(this.closest('.attachment-item'), 'Link')"></i></div></div>
-        <iframe src="${url}" loading="lazy" onload="iframeLoaded(this)" onerror="showIframeFallback(this)"></iframe>
-        <div class="iframe-fallback" style="display:none; padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;"><i class="ri-lock-line" style="font-size:2rem; display:block; margin-bottom:8px;"></i>Diese Seite erlaubt keine Einbettung.<br><a href="${url}" target="_blank" style="color:var(--brand);">Im neuen Tab öffnen →</a></div>
-    </div>`;
+    const html = buildCompactLinkHtml(url, name);
     currentAttachWrapper.insertAdjacentHTML('beforeend', html);
     document.getElementById('link-modal').style.display = 'none';
     saveToLocal();
@@ -1006,8 +1045,8 @@ function updateCardMetaChips() {
         const items = card.querySelectorAll('.item-container').length;
         const atts = card.querySelectorAll('.attachment-item').length;
         let html = '';
-        if(items > 0) html += `<span class="meta-chip"><i class="ri-list-check"></i> ${items}</span>`;
-        if(atts > 0) html += `<span class="meta-chip"><i class="ri-attachment-2"></i> ${atts}</span>`;
+        if(items > 0) html += `<span class="meta-chip"><i class="fa-solid fa-list-check" aria-hidden="true"></i> ${items}</span>`;
+        if(atts > 0) html += `<span class="meta-chip"><i class="fa-solid fa-paperclip" aria-hidden="true"></i> ${atts}</span>`;
         chipsContainer.innerHTML = html;
     });
 }
@@ -1023,14 +1062,14 @@ function updateSectionItemCounts() {
 }
 
 function addCard(btn) {
-    const html = renderCards([{ title: "Neue Karte", sections: [{name: "Ziel", icon: "ri-focus-2-line", items: []}] }]);
+    const html = renderCards([createCardData("Neue Karte")]);
     btn.insertAdjacentHTML('beforebegin', html);
     saveToLocal();
 }
 
 function addPhase(btn) {
     const trackPhasesRow = btn.closest('.phases-row');
-    const newPhaseHtml = `<div class="phase-col"><div class="phase-label edit-wrap"><span class="edit-target" title="Neue Phase">Neue Phase</span><i class="ri-pencil-line edit-pen" onclick="makeEditable(this, event, 40)"></i></div><div class="phase-cards"><button class="add-entry-btn" onclick="addCard(this)"><i class="ri-add-line"></i> Neue Karte</button></div></div>`;
+    const newPhaseHtml = `<div class="phase-col"><div class="phase-label edit-wrap"><span class="edit-target" title="Neue Phase">Neue Phase</span><i class="fa-solid fa-pen edit-pen" onclick="makeEditable(this, event, 40)"></i></div><div class="phase-cards"><button class="add-entry-btn" onclick="addCard(this)"><i class="fa-solid fa-plus"></i> Neue Karte</button></div></div>`;
     btn.closest('.add-phase-col').insertAdjacentHTML('beforebegin', newPhaseHtml);
     updateScrollArrows(trackPhasesRow);
     saveToLocal();
@@ -1038,7 +1077,7 @@ function addPhase(btn) {
 
 function addListItem(btn) {
     const list = btn.closest('.field').querySelector('.section-item-list');
-    const html = `<li class="item-container"><div class="item-row"><div class="edit-wrap"><span class="edit-target">Neuer Punkt</span></div><div class="item-actions"><i class="ri-pencil-line action-btn-small edit-item-icon" onclick="makeEditable(this, event, 500)" data-edit-selector=".edit-target" data-edit-scope=".item-row"></i><i class="ri-add-line action-btn-small" onclick="openItemMenu(this, event)"></i><i class="ri-delete-bin-line action-btn-small delete-btn" onclick="softDelete(this.closest('.item-container'), 'Eintrag')"></i></div></div><div class="item-attachments-wrapper tags-container"></div></li>`;
+    const html = `<li class="item-container"><div class="item-row"><div class="edit-wrap"><span class="edit-target">Neuer Punkt</span></div><div class="item-actions"><i class="fa-solid fa-pen action-btn-small edit-item-icon" onclick="makeEditable(this, event, 500)" data-edit-selector=".edit-target" data-edit-scope=".item-row"></i><i class="fa-solid fa-plus action-btn-small" onclick="openItemMenu(this, event)"></i><i class="fa-solid fa-trash action-btn-small delete-btn" onclick="softDelete(this.closest('.item-container'), 'Eintrag')"></i></div></div><div class="item-attachments-wrapper tags-container"></div></li>`;
     list.insertAdjacentHTML('beforeend', html);
     saveToLocal();
 }
@@ -1131,6 +1170,125 @@ function serializeBoardFromDOM() {
     return newData;
 }
 
+function getReadModeSteps() {
+    const data = serializeBoardFromDOM();
+    const steps = [];
+    (data || []).forEach((track) => {
+        (track.phases || []).forEach((phase) => {
+            steps.push({ trackTitle: track.title, phaseName: phase.name, cards: phase.cards || [] });
+        });
+    });
+    return steps;
+}
+
+function renderReadAttachmentData(att) {
+    if (att.type === 'link') {
+        const url = att.url || '';
+        const name = escapeHtml(att.name || url);
+        return `<div class="read-full-preview" data-type="link">
+            <div class="preview-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <span><i class="fa-solid fa-link" style="color:var(--brand); margin-right:6px;" aria-hidden="true"></i><a href="${escapeAttr(url)}" target="_blank" rel="noopener" style="font-weight:600;">${name}</a></span>
+            </div>
+            <iframe src="${escapeAttr(url)}" loading="lazy" title="Vorschau" onload="iframeLoaded(this)" onerror="showIframeFallback(this)"></iframe>
+            <div class="iframe-fallback" style="display:none; padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;">Einbetten ggf. nicht erlaubt. <a href="${escapeAttr(url)}" target="_blank" rel="noopener" style="color:var(--brand);">Im Tab öffnen</a></div>
+        </div>`;
+    }
+    if (att.type === 'file') {
+        const mime = att.mime || '';
+        const name = att.name || 'Datei';
+        const nameEsc = escapeHtml(name);
+        const data = att.data || '';
+        const displayUrl = (mime === 'application/pdf') ? createBlobUrl(data, mime) : data;
+        if (mime.startsWith('image/')) {
+            return `<div class="read-full-preview"><div class="preview-header"><i class="fa-solid fa-image" style="color:var(--brand); margin-right:6px;" aria-hidden="true"></i>${nameEsc}</div><img src="${displayUrl}" alt="${nameEsc}"></div>`;
+        }
+        if (mime === 'application/pdf') {
+            return `<div class="read-full-preview"><div class="preview-header"><i class="fa-solid fa-file-pdf" style="color:var(--brand); margin-right:6px;" aria-hidden="true"></i>${nameEsc}</div><embed src="${displayUrl}" type="application/pdf"></div>`;
+        }
+        return `<div class="read-full-preview" style="padding:1rem;"><p style="font-weight:600; margin-bottom:0.5rem;"><i class="fa-solid fa-file" style="color:var(--brand); margin-right:6px;" aria-hidden="true"></i>${nameEsc}</p><a href="${displayUrl}" target="_blank" rel="noopener" download="${escapeAttr(name)}" style="color:var(--brand); font-weight:600;">Öffnen / Download</a></div>`;
+    }
+    if (att.type === 'tag') {
+        return `<p style="margin:0.3rem 0 0.5rem 0;"><span style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--status-bg);border-radius:999px;padding:4px 12px;font-size:0.88rem;"><i class="fa-solid fa-tag" style="color:var(--brand);"></i>${escapeHtml(att.name || '')}</span></p>`;
+    }
+    if (att.type === 'richtext') {
+        return `<div class="read-richtext-wrap read-full-preview" style="padding:0.9rem 1.05rem; line-height:1.6; border:1px solid var(--line); border-radius:10px; background:var(--bg);">${sanitizeRichTextHTML(att.html || '')}</div>`;
+    }
+    return '';
+}
+
+function buildReadModeCardHtml(card) {
+    let h = `<article class="read-card-block"><h3 class="read-card-title">${escapeHtml(card.title || '')}</h3>`;
+    (card.sections || []).forEach((sec) => {
+        h += `<div class="read-section"><h4><i class="${sec.icon || 'fa-solid fa-layer-group'}" aria-hidden="true"></i> ${escapeHtml(sec.name || '')}</h4>`;
+        (sec.items || []).forEach((item) => {
+            h += `<div class="read-item"><div class="read-item-text">› ${escapeHtml(item.text || '')}</div>`;
+            (item.attachments || []).forEach((a) => { h += renderReadAttachmentData(a); });
+            h += `</div>`;
+        });
+        h += `</div>`;
+    });
+    h += `</article>`;
+    return h;
+}
+
+function buildReadModePhaseHtml(step) {
+    const cards = step.cards || [];
+    if (cards.length === 0) {
+        return '<p class="read-empty" style="text-align:center; color:var(--muted); padding:2.5rem 1rem;">In dieser Phase sind noch keine Karten.</p>';
+    }
+    return cards.map((c) => buildReadModeCardHtml(c)).join('');
+}
+
+function refreshReadModeView() {
+    const steps = getReadModeSteps();
+    const elBc = document.getElementById('read-mode-breadcrumb');
+    const elT = document.getElementById('read-mode-title');
+    const elP = document.getElementById('read-mode-progress');
+    const elBody = document.getElementById('read-mode-body');
+    const prevBtn = document.getElementById('read-mode-prev');
+    const nextBtn = document.getElementById('read-mode-next');
+    if (!elBody) return;
+    if (steps.length === 0) {
+        if (elBc) elBc.textContent = '—';
+        if (elT) elT.textContent = 'Keine Phasen';
+        if (elP) elP.textContent = '0 / 0';
+        elBody.innerHTML = '<p class="read-empty" style="text-align:center; color:var(--muted); padding:2.5rem 1rem;">Noch kein SOP-Inhalt – wechsle in den Bearbeiten-Modus.</p>';
+        if (prevBtn) prevBtn.disabled = true;
+        if (nextBtn) nextBtn.disabled = true;
+        return;
+    }
+    if (readModeIndex >= steps.length) readModeIndex = steps.length - 1;
+    if (readModeIndex < 0) readModeIndex = 0;
+    const step = steps[readModeIndex];
+    if (elBc) elBc.textContent = `${step.trackTitle} · ${step.phaseName}`;
+    if (elT) elT.textContent = step.phaseName;
+    if (elP) elP.textContent = `Phase ${readModeIndex + 1} / ${steps.length}`;
+    elBody.innerHTML = buildReadModePhaseHtml(step);
+    if (prevBtn) prevBtn.disabled = readModeIndex === 0;
+    if (nextBtn) nextBtn.disabled = readModeIndex >= steps.length - 1;
+    elBody.scrollTop = 0;
+}
+
+function readModePrev() {
+    if (readModeIndex > 0) { readModeIndex--; refreshReadModeView(); }
+}
+
+function readModeNext() {
+    const steps = getReadModeSteps();
+    if (readModeIndex < steps.length - 1) { readModeIndex++; refreshReadModeView(); }
+}
+
+function setSopViewMode(mode) {
+    const isRead = mode === 'read';
+    sopViewMode = isRead ? 'read' : 'edit';
+    document.body.classList.toggle('sop-mode-read', isRead);
+    const rb = document.getElementById('sop-mode-read-btn');
+    const eb = document.getElementById('sop-mode-edit-btn');
+    if (rb) rb.setAttribute('aria-pressed', isRead);
+    if (eb) eb.setAttribute('aria-pressed', !isRead);
+    if (isRead) { readModeIndex = 0; refreshReadModeView(); }
+}
+
 // --- DROPDOWN / MENU ---
 let currentAttachWrapper = null;
 function openItemMenu(btn, event) {
@@ -1174,13 +1332,7 @@ document.getElementById('global-file-input').addEventListener('change', function
     reader.onload = function(event) {
         placeholder.remove();
         const base64Data = event.target.result;
-        let displayUrl = (file.type === 'application/pdf') ? createBlobUrl(base64Data, file.type) : base64Data;
-        let previewContent, isViewable = false;
-        if (file.type.startsWith('image/')) { previewContent = `<img src="${displayUrl}">`; isViewable = true; }
-        else if (file.type === 'application/pdf') { previewContent = `<embed src="${displayUrl}" type="application/pdf" height="250px" width="100%"></embed>`; isViewable = true; }
-        else previewContent = `<div style="padding:20px;text-align:center;color:var(--muted);"><i class="ri-file-line" style="font-size:2rem;"></i><br>Keine Vorschau verfügbar</div>`;
-        let fsBtn = isViewable ? `<i class="ri-fullscreen-line preview-action-btn" onclick="openFullscreenFromDOM(this)" data-mime="${file.type}"></i>` : '';
-        const html = `<div class="attachment-item preview-box" data-type="file" data-name="${file.name}" data-mime="${file.type}"><textarea class="hidden-base64-data" style="display:none;">${base64Data}</textarea><div class="preview-header"><span><i class="ri-attachment-2"></i> ${file.name}</span><div class="preview-actions">${fsBtn}<i class="ri-delete-bin-line preview-action-btn delete-btn" onclick="softDelete(this.closest('.attachment-item'), 'Datei')"></i></div></div>${previewContent}</div>`;
+        const html = buildCompactFileHtml(file.name, base64Data, file.type);
         currentAttachWrapper.insertAdjacentHTML('beforeend', html);
         saveToLocal();
     };
