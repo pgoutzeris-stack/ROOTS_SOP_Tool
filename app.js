@@ -1194,12 +1194,9 @@ function getReadModeSteps() {
 function renderReadAttachmentData(att) {
     if (att.type === 'link') {
         const url = att.url || '';
-        const name = escapeHtml(att.name || url);
-        return `<div class="read-full-preview read-full-preview--media" data-type="link">
-            <div class="preview-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-                <span><i class="ri-link" style="color:var(--brand); margin-right:6px;" aria-hidden="true"></i><a href="${escapeAttr(url)}" target="_blank" rel="noopener" style="font-weight:600;">${name}</a></span>
-            </div>
-            <iframe class="read-embed" src="${escapeAttr(url)}" loading="lazy" title="Vorschau" onload="iframeLoaded(this)" onerror="showIframeFallback(this)"></iframe>
+        const label = att.name || url || 'Link';
+        return `<div class="read-full-preview read-full-preview--media read-full-preview--bleed" data-type="link">
+            <iframe class="read-embed" src="${escapeAttr(url)}" loading="lazy" title="${escapeAttr(label)}" onload="iframeLoaded(this)" onerror="showIframeFallback(this)"></iframe>
             <div class="iframe-fallback" style="display:none; padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;">Einbetten ggf. nicht erlaubt. <a href="${escapeAttr(url)}" target="_blank" rel="noopener" style="color:var(--brand);">Im Tab öffnen</a></div>
         </div>`;
     }
@@ -1210,18 +1207,18 @@ function renderReadAttachmentData(att) {
         const data = att.data || '';
         const displayUrl = (mime === 'application/pdf') ? createBlobUrl(data, mime) : data;
         if (mime.startsWith('image/')) {
-            return `<div class="read-full-preview read-full-preview--media"><div class="preview-header"><i class="ri-image-line" style="color:var(--brand); margin-right:6px;" aria-hidden="true"></i>${nameEsc}</div><img class="read-embed" src="${displayUrl}" alt="${nameEsc}"></div>`;
+            return `<div class="read-full-preview read-full-preview--media read-full-preview--bleed"><img class="read-embed" src="${displayUrl}" alt=""></div>`;
         }
         if (mime === 'application/pdf') {
-            return `<div class="read-full-preview read-full-preview--media"><div class="preview-header"><i class="ri-file-pdf-line" style="color:var(--brand); margin-right:6px;" aria-hidden="true"></i>${nameEsc}</div><embed class="read-embed" src="${displayUrl}" type="application/pdf"></div>`;
+            return `<div class="read-full-preview read-full-preview--media read-full-preview--bleed"><embed class="read-embed" src="${displayUrl}" type="application/pdf" title="${escapeAttr(name)}"></div>`;
         }
-        return `<div class="read-full-preview" style="padding:1rem;"><p style="font-weight:600; margin-bottom:0.5rem;"><i class="ri-file-line" style="color:var(--brand); margin-right:6px;" aria-hidden="true"></i>${nameEsc}</p><a href="${displayUrl}" target="_blank" rel="noopener" download="${escapeAttr(name)}" style="color:var(--brand); font-weight:600;">Öffnen / Download</a></div>`;
+        return `<div class="read-file-fallback read-full-preview--bleed"><a class="read-file-open" href="${escapeAttr(displayUrl)}" target="_blank" rel="noopener" download="${escapeAttr(name)}"><i class="ri-external-link-line" aria-hidden="true"></i><span>Datei öffnen</span></a></div>`;
     }
     if (att.type === 'tag') {
         return `<p style="margin:0.3rem 0 0.5rem 0;"><span style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--status-bg);border-radius:999px;padding:4px 12px;font-size:0.88rem;"><i class="ri-price-tag-3-line" style="color:var(--brand);"></i>${escapeHtml(att.name || '')}</span></p>`;
     }
     if (att.type === 'richtext') {
-        return `<div class="read-richtext-wrap read-full-preview" style="padding:0.9rem 1.05rem; line-height:1.6; border:1px solid var(--line); border-radius:10px; background:var(--bg);">${sanitizeRichTextHTML(att.html || '')}</div>`;
+        return `<div class="read-richtext-wrap read-full-preview read-full-preview--bleed-text">${sanitizeRichTextHTML(att.html || '')}</div>`;
     }
     return '';
 }
@@ -1232,7 +1229,7 @@ function buildReadModeCardHtml(card) {
         h += `<div class="read-section"><h4 class="read-section-title"><i class="${sec.icon || 'ri-file-list-3-line'}" aria-hidden="true"></i> ${escapeHtml(sec.name || '')}</h4><div class="read-section-list">`;
         (sec.items || []).forEach((item) => {
             const atts = (item.attachments || []).map((a) => renderReadAttachmentData(a)).join('');
-            h += `<div class="read-item">`;
+            h += `<div class="read-item${atts ? ' read-item--with-attachments' : ''}">`;
             h += `<div class="read-item-text">${escapeHtml(item.text || '')}</div>`;
             if (atts) h += `<div class="read-item-attachments">${atts}</div>`;
             h += `</div>`;
@@ -1261,7 +1258,7 @@ function sizeReadPreviewHeights() {
     const navH = nav ? nav.offsetHeight : 56;
     const margin = 32;
     const available = Math.max(180, vh - top - navH - margin);
-    const h = Math.max(200, Math.min(420, available * 0.44));
+    const h = Math.max(220, Math.min(580, available * 0.58));
     root.querySelectorAll('.read-full-preview--media iframe.read-embed, .read-full-preview--media embed.read-embed').forEach((el) => {
         el.style.height = h + 'px';
         el.style.minHeight = '0';
