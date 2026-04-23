@@ -1229,13 +1229,15 @@ function renderReadAttachmentData(att) {
 function buildReadModeCardHtml(card) {
     let h = `<article class="read-card-block"><h3 class="read-card-title">${escapeHtml(card.title || '')}</h3>`;
     (card.sections || []).forEach((sec) => {
-        h += `<div class="read-section"><h4><i class="${sec.icon || 'ri-file-list-3-line'}" aria-hidden="true"></i> ${escapeHtml(sec.name || '')}</h4>`;
+        h += `<div class="read-section"><h4 class="read-section-title"><i class="${sec.icon || 'ri-file-list-3-line'}" aria-hidden="true"></i> ${escapeHtml(sec.name || '')}</h4><div class="read-section-list">`;
         (sec.items || []).forEach((item) => {
-            h += `<div class="read-item"><div class="read-item-text">› ${escapeHtml(item.text || '')}</div>`;
-            (item.attachments || []).forEach((a) => { h += renderReadAttachmentData(a); });
+            const atts = (item.attachments || []).map((a) => renderReadAttachmentData(a)).join('');
+            h += `<div class="read-item">`;
+            h += `<div class="read-item-text">${escapeHtml(item.text || '')}</div>`;
+            if (atts) h += `<div class="read-item-attachments">${atts}</div>`;
             h += `</div>`;
         });
-        h += `</div>`;
+        h += `</div></div>`;
     });
     h += `</article>`;
     return h;
@@ -1257,11 +1259,12 @@ function sizeReadPreviewHeights() {
     const vh = window.innerHeight;
     const top = sticky ? sticky.getBoundingClientRect().bottom : 0;
     const navH = nav ? nav.offsetHeight : 56;
-    const margin = 20;
-    const h = Math.max(240, vh - top - navH - margin);
+    const margin = 32;
+    const available = Math.max(180, vh - top - navH - margin);
+    const h = Math.max(200, Math.min(420, available * 0.44));
     root.querySelectorAll('.read-full-preview--media iframe.read-embed, .read-full-preview--media embed.read-embed').forEach((el) => {
         el.style.height = h + 'px';
-        el.style.minHeight = h + 'px';
+        el.style.minHeight = '0';
     });
     root.querySelectorAll('.read-full-preview--media > img.read-embed').forEach((el) => {
         el.style.maxHeight = h + 'px';

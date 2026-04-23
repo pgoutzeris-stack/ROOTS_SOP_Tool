@@ -326,19 +326,25 @@
     .read-tab--active:hover { background: var(--brand); color: #fff; border-color: var(--brand); }
     .read-tab--track:not(.read-tab--active) { background: var(--status-bg); }
     .read-tab--track:not(.read-tab--active):hover { background: var(--brand); color: #fff; border-color: var(--brand); }
-    .read-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0.5rem 0 5.2rem; }
-    .read-card-block { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); margin-bottom: 1rem; padding: 0.9rem 1rem; }
-    .read-card-title { font-size: 1rem; font-weight: 800; color: var(--ink); margin-bottom: 0.65rem; padding-bottom: 0.45rem; border-bottom: 1px solid var(--line); }
-    .read-section { margin-bottom: 0.9rem; }
-    .read-section h4 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--brand); margin: 0 0 0.45rem; display: flex; align-items: center; gap: 0.4rem; }
-    .read-item { margin-bottom: 0.5rem; padding-left: 0.2rem; }
-    .read-item > .read-item-text { font-weight: 600; color: var(--ink); margin-bottom: 0.35rem; }
-    .read-full-preview { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 0.35rem 0; background: var(--bg); }
-    .read-full-preview .preview-header { font-size: 0.8rem; padding: 0.5rem 0.75rem; background: var(--status-bg); border-bottom: 1px solid var(--line); }
+    .read-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0.6rem 0 5.2rem; }
+    .read-card-block { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); margin-bottom: 1.1rem; padding: 1rem 1.05rem; }
+    .read-card-title { font-size: 1.02rem; font-weight: 800; color: var(--ink); margin: 0 0 0.9rem; padding-bottom: 0.55rem; border-bottom: 1px solid var(--line); letter-spacing: -0.02em; }
+    .read-section { margin-bottom: 1.15rem; }
+    .read-section:last-child { margin-bottom: 0; }
+    .read-section-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 0.55rem; display: flex; align-items: center; gap: 0.4rem; }
+    .read-section-title i { color: var(--brand); font-size: 1rem; }
+    .read-section-list { display: flex; flex-direction: column; gap: 0.65rem; }
+    .read-item { display: flex; flex-direction: column; gap: 0; padding: 0.7rem 0.75rem; background: var(--status-bg); border: 1px solid var(--line); border-radius: 12px; }
+    .read-item-text { font-size: 0.9rem; line-height: 1.5; font-weight: 600; color: var(--ink); margin: 0; padding: 0.1rem 0.15rem 0; }
+    .read-item-attachments { display: flex; flex-direction: column; gap: 0.7rem; margin-top: 0.65rem; padding-top: 0.7rem; border-top: 1px solid var(--line); }
+    .read-item-attachments .read-full-preview { margin: 0; max-width: min(100%, 640px); margin-left: auto; margin-right: auto; width: 100%; }
+    .read-item-attachments .read-richtext-wrap { max-width: min(100%, 640px); margin-left: auto; margin-right: auto; }
+    .read-full-preview { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); box-shadow: 0 1px 0 rgba(15,23,42,0.04); }
+    .read-item-attachments .read-full-preview--media { border-radius: 10px; }
+    .read-full-preview .preview-header { font-size: 0.75rem; padding: 0.45rem 0.65rem; background: var(--status-bg); border-bottom: 1px solid var(--line); }
     .read-full-preview iframe, .read-full-preview embed, .read-full-preview img { width: 100%; border: 0; display: block; }
-    .read-full-preview iframe, .read-full-preview embed { min-height: 320px; }
     .read-full-preview img { object-fit: contain; background: var(--status-bg); }
-    .read-richtext-wrap { max-height: min(50dvh, 480px); overflow: auto; }
+    .read-richtext-wrap { max-height: min(42dvh, 360px); overflow: auto; font-size: 0.9rem; }
     .read-nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.6rem 1.25rem; background: var(--bg); border-top: 1px solid var(--line); box-shadow: 0 -4px 20px rgba(15,23,42,0.08); z-index: 30; }
     .read-nav .btn-revision, .read-nav .btn-save { min-width: 7rem; justify-content: center; }
     @media (max-width: 680px) {
