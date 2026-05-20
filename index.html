@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <title>ROOTS Consulting - Cloud SOP</title>
     <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/circular-std">
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" />
 
     <style>
     :root {
@@ -506,17 +506,17 @@
 <input type="file" id="global-file-input" style="display:none;">
 
 <div class="fullscreen-overlay" id="fs-overlay" onclick="closeFullscreen()">
-    <i class="ri-close-line close-fs"></i>
+    <i class="fa-solid fa-xmark close-fs"></i>
     <div id="fs-container" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;"></div>
 </div>
 
 <div id="roots-sop-container">
 
     <div id="item-add-menu" class="global-dropdown">
-        <div class="global-dropdown-item" onclick="handleItemAttach('link')"><i class="ri-link"></i> Link (Iframe) anhängen</div>
-        <div class="global-dropdown-item" onclick="handleItemAttach('file')"><i class="ri-attachment-2"></i> Datei (Upload) anhängen</div>
-        <div class="global-dropdown-item" onclick="handleItemAttach('richtext')"><i class="ri-text"></i> Textblock (formatiert)</div>
-        <div class="global-dropdown-item" onclick="handleItemAttach('tag')"><i class="ri-price-tag-3-line"></i> Tag anhängen</div>
+        <div class="global-dropdown-item" onclick="handleItemAttach('link')"><i class="fa-solid fa-link"></i> Link (Iframe) anhängen</div>
+        <div class="global-dropdown-item" onclick="handleItemAttach('file')"><i class="fa-solid fa-paperclip"></i> Datei (Upload) anhängen</div>
+        <div class="global-dropdown-item" onclick="handleItemAttach('richtext')"><i class="fa-solid fa-font"></i> Textblock (formatiert)</div>
+        <div class="global-dropdown-item" onclick="handleItemAttach('tag')"><i class="fa-solid fa-tag"></i> Tag anhängen</div>
     </div>
 
     <div class="roots-sop">
@@ -551,38 +551,38 @@
 
           <div style="position:relative; display:inline-flex;">
             <button class="btn-revision header-action-btn" title="Export" onclick="openExportMenu(this, event)">
-              <i class="ri-download-2-line"></i>
+              <i class="fa-solid fa-download"></i>
               Export
             </button>
             <div id="export-menu" class="global-dropdown" style="right:0; top:calc(100% + 6px);">
-              <div class="global-dropdown-item" onclick="exportJSON()"><i class="ri-file-code-line"></i> JSON</div>
-              <div class="global-dropdown-item" onclick="exportMarkdown()"><i class="ri-markdown-line"></i> Markdown (.md)</div>
-              <div class="global-dropdown-item" onclick="exportPNG()"><i class="ri-image-line"></i> PNG Screenshot</div>
-              <div class="global-dropdown-item" onclick="exportJPEG()"><i class="ri-image-2-line"></i> JPEG Screenshot</div>
-              <div class="global-dropdown-item" onclick="exportSVG()"><i class="ri-shapes-line"></i> SVG Struktur</div>
-              <div class="global-dropdown-item" onclick="exportHTMLSnapshot()"><i class="ri-file-code-line"></i> HTML Snapshot</div>
-              <div class="global-dropdown-item" onclick="exportPrint()"><i class="ri-printer-line"></i> PDF (Drucken)</div>
+              <div class="global-dropdown-item" onclick="exportJSON()"><i class="fa-solid fa-file-code"></i> JSON</div>
+              <div class="global-dropdown-item" onclick="exportMarkdown()"><i class="fa-brands fa-markdown"></i> Markdown (.md)</div>
+              <div class="global-dropdown-item" onclick="exportPNG()"><i class="fa-solid fa-image"></i> PNG Screenshot</div>
+              <div class="global-dropdown-item" onclick="exportJPEG()"><i class="fa-solid fa-image"></i> JPEG Screenshot</div>
+              <div class="global-dropdown-item" onclick="exportSVG()"><i class="fa-solid fa-shapes"></i> SVG Struktur</div>
+              <div class="global-dropdown-item" onclick="exportHTMLSnapshot()"><i class="fa-solid fa-file-code"></i> HTML Snapshot</div>
+              <div class="global-dropdown-item" onclick="exportPrint()"><i class="fa-solid fa-print"></i> PDF (Drucken)</div>
             </div>
           </div>
 
           <button class="btn-revision header-action-btn" title="Versionsverlauf" onclick="openRevisions()">
-            <i class="ri-history-line"></i>
+            <i class="fa-solid fa-clock-rotate-left"></i>
             Verlauf
           </button>
 
           <div class="header-sep"></div>
 
-          <span id="sync-status" class="sync-badge online" title="Online"><i class="ri-cloud-line"></i> Online</span>
+          <span id="sync-status" class="sync-badge online" title="Online"><i class="fa-solid fa-cloud"></i> Online</span>
 
           <button class="btn-save header-action-btn" id="main-save-btn" onclick="saveRevisionToCloud()">
-            <i class="ri-upload-cloud-2-line"></i>
+            <i class="fa-solid fa-cloud-arrow-up"></i>
             Speichern
           </button>
         </div>
       </header>
 
       <div id="main-board">
-         <div style="text-align:center; padding: 50px;"><i class="ri-loader-4-line ri-spin" style="font-size: 2rem; color: var(--brand);"></i></div>
+         <div style="text-align:center; padding: 50px;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: var(--brand);"></i></div>
       </div>
 
       <div id="read-mode-root" class="read-mode-root">
@@ -599,8 +599,8 @@
         </div>
         <div class="read-body" id="read-mode-body" tabindex="0" aria-label="Ablaufinhalt"></div>
         <div class="read-nav" role="navigation" aria-label="Phasen-Navigation">
-          <button type="button" class="btn-revision" id="read-mode-prev" title="Vorheriger Schritt"><i class="ri-arrow-left-s-line" aria-hidden="true"></i> Zurück</button>
-          <button type="button" class="btn-save" id="read-mode-next" title="Nächster Schritt">Weiter <i class="ri-arrow-right-s-line" aria-hidden="true"></i></button>
+          <button type="button" class="btn-revision" id="read-mode-prev" title="Vorheriger Schritt"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i> Zurück</button>
+          <button type="button" class="btn-save" id="read-mode-next" title="Nächster Schritt">Weiter <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
         </div>
       </div>
     </div>
@@ -609,7 +609,7 @@
 <!-- Modals -->
 <div class="modal-overlay" id="save-modal">
     <div class="modal-box" style="max-width: 450px;">
-        <div class="modal-title"><i class="ri-user-line"></i> Version in Cloud speichern</div>
+        <div class="modal-title"><i class="fa-solid fa-user"></i> Version in Cloud speichern</div>
         <div style="margin-bottom: 20px;">
             <label class="modern-label">Dein Name / Kürzel</label>
             <input type="text" id="modal-author-name" class="modern-input" placeholder="Wer hat diese Änderungen gemacht?">
@@ -623,7 +623,7 @@
 
 <div class="modal-overlay" id="revision-modal">
     <div class="modal-box">
-        <div class="modal-title"><i class="ri-history-line"></i> Cloud Versionsverlauf</div>
+        <div class="modal-title"><i class="fa-solid fa-clock-rotate-left"></i> Cloud Versionsverlauf</div>
         <div class="revision-list" id="revision-list"></div>
         <div class="modal-btns">
             <button class="btn-revision" onclick="closeModal('revision-modal')">Schließen</button>
@@ -633,7 +633,7 @@
 
 <div class="modal-overlay" id="tag-modal">
     <div class="modal-box" style="max-width: 400px;">
-        <div class="modal-title"><i class="ri-price-tag-3-line"></i> Tag hinzufügen</div>
+        <div class="modal-title"><i class="fa-solid fa-tag"></i> Tag hinzufügen</div>
         <div style="margin-bottom: 20px;">
             <label class="modern-label">Tag Name</label>
             <input type="text" id="modal-tag-name" class="modern-input" placeholder="Z.B. Priorität, Review, Draft...">
@@ -647,7 +647,7 @@
 
 <div class="modal-overlay" id="link-modal">
     <div class="modal-box" style="max-width: 450px;">
-        <div class="modal-title"><i class="ri-link"></i> Link hinzufügen</div>
+        <div class="modal-title"><i class="fa-solid fa-link"></i> Link hinzufügen</div>
         <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
             <div>
                 <label class="modern-label">URL-Adresse</label>
@@ -677,7 +677,7 @@
 
 <div class="modal-overlay" id="rt-fullscreen-modal" onclick="if(event.target===this) closeRichTextFullscreen()">
     <div class="modal-box large rt-fullscreen-box">
-        <div class="modal-title"><i class="ri-text"></i> Textblock Vollbild bearbeiten</div>
+        <div class="modal-title"><i class="fa-solid fa-font"></i> Textblock Vollbild bearbeiten</div>
         <div class="rt-container rt-fullscreen-wrap">
             <div class="rt-toolbar" id="rt-fullscreen-toolbar"></div>
             <div class="rt-editor rt-editor-fullscreen" id="rt-fullscreen-editor" contenteditable="true" oninput="syncRichTextFullscreen()"></div>
@@ -690,7 +690,7 @@
 
 <div class="modal-overlay" id="rt-link-modal">
     <div class="modal-box" style="max-width: 460px;">
-        <div class="modal-title"><i class="ri-link"></i> Link einfügen</div>
+        <div class="modal-title"><i class="fa-solid fa-link"></i> Link einfügen</div>
         <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:16px;">
             <div>
                 <label class="modern-label">URL</label>
@@ -706,7 +706,7 @@
 
 <div class="modal-overlay" id="rt-table-modal">
     <div class="modal-box" style="max-width: 460px;">
-        <div class="modal-title"><i class="ri-table-line"></i> Tabelle einfügen</div>
+        <div class="modal-title"><i class="fa-solid fa-table"></i> Tabelle einfügen</div>
         <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:16px;">
             <div>
                 <label class="modern-label">Zeilen</label>
