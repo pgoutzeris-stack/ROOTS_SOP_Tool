@@ -676,11 +676,6 @@
           <div class="header-sep" aria-hidden="true"></div>
           <div id="roots-header-avatar" style="cursor:pointer" title="Profil"></div>
           <span id="roots-header-name" style="font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap"></span>
-          <div class="header-sep" aria-hidden="true"></div>
-          <button type="button" class="btn-revision header-action-btn" id="roots-logout-btn" title="Abmelden">
-            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-            Abmelden
-          </button>
         </div>
       </header>
 
@@ -837,12 +832,31 @@
   const overlay=document.getElementById('roots-auth-overlay');
   const vLogin=document.getElementById('roots-view-login');
   const vForgot=document.getElementById('roots-view-forgot');
+  const LOGIN_BTN_HTML='<i class="fa-solid fa-arrow-right-to-bracket"></i> Anmelden';
+  const RESET_BTN_HTML='<i class="fa-solid fa-paper-plane"></i> Link senden';
+  function resetLoginUi(){
+    const btn=document.getElementById('roots-login-btn');
+    if(btn){btn.disabled=false;btn.innerHTML=LOGIN_BTN_HTML;}
+    const rb=document.getElementById('roots-reset-btn');
+    if(rb){rb.disabled=false;rb.innerHTML=RESET_BTN_HTML;}
+  }
+  function showAuthOverlay(){
+    if(!overlay)return;
+    overlay.style.display='flex';
+    if(vLogin)vLogin.style.display='block';
+    if(vForgot)vForgot.style.display='none';
+    resetLoginUi();
+  }
+  function hideAuthOverlay(){
+    if(overlay)overlay.style.display='none';
+  }
   sb.auth.getSession().then(({data:{session}})=>{
-    if(session){overlay.style.display='none';window.RootsUser._loadAndMount(sb);}
+    if(session){hideAuthOverlay();window.RootsUser._loadAndMount(sb);}
+    else{resetLoginUi();}
   });
   sb.auth.onAuthStateChange((event,session)=>{
-    if(session){overlay.style.display='none';window.RootsUser._loadAndMount(sb);}
-    else if(event==='SIGNED_OUT'){overlay.style.display='flex';vLogin.style.display='block';vForgot.style.display='none';}
+    if(session){hideAuthOverlay();window.RootsUser._loadAndMount(sb);}
+    else if(event==='SIGNED_OUT'){showAuthOverlay();}
   });
   document.getElementById('roots-login-form').addEventListener('submit',async(e)=>{
     e.preventDefault();
@@ -869,8 +883,7 @@
     else{okEl.classList.add('visible');btn.disabled=false;}
   });
   document.getElementById('roots-go-forgot').addEventListener('click',()=>{vLogin.style.display='none';vForgot.style.display='block';});
-  document.getElementById('roots-go-login').addEventListener('click',()=>{vForgot.style.display='none';vLogin.style.display='block';});
-  document.getElementById('roots-logout-btn')?.addEventListener('click',()=>sb.auth.signOut());
+  document.getElementById('roots-go-login').addEventListener('click',()=>{vForgot.style.display='none';vLogin.style.display='block';resetLoginUi();});
 })();
 </script>
 
