@@ -85,13 +85,13 @@ function showToast(message, type = 'info', undoCallback = null) {
 // --- LOCAL STORAGE AUTO-SAVE ---
 function saveToLocal() {
     const data = serializeBoardFromDOM();
-    localStorage.setItem('roots_sop_autosave', JSON.stringify(data));
+    localStorage.setItem('roots_sop_autosave_v2', JSON.stringify(data));
     updateSectionItemCounts();
     updateCardMetaChips();
 }
 
 function loadFromLocal() {
-    const saved = localStorage.getItem('roots_sop_autosave');
+    const saved = localStorage.getItem('roots_sop_autosave_v2');
     return saved ? JSON.parse(saved) : null;
 }
 
