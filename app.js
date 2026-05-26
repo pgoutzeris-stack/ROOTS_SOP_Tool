@@ -26,30 +26,91 @@ const createCardData = (title) => ({
     ]
 });
 
+const createCardWithSteps = (title, steps) => {
+    const card = createCardData(title);
+    const section = card.sections.find(sec => sec.name === "Subschritte");
+    if (section && Array.isArray(steps) && steps.length) {
+        section.items = steps.map(text => ({ text, attachments: [] }));
+    }
+    return card;
+};
+
 const DEFAULT_DATA = [
     {
-        title: "Track 1: Pre-Engagement", class: "track-pre",
+        title: "Track 1 – Pre-Engagement", class: "track-pre",
         phases: [
-            { name: "Anbahnung", cards: [ createCardData("Bedarfserkennung / Problem Sensing"), createCardData("Erstgespräch / ROOTS Vorstellung") ] },
-            { name: "Exploration", cards: [ createCardData("Problem Verstehen"), createCardData("Zielstellung klären"), createCardData("Initiale Analyse"), createCardData("Initiale Hypothese(n)") ] },
-            { name: "Pitch", cards: [ createCardData("Projektablauf skizzieren"), createCardData("KVA aufsetzen"), createCardData("Kundenpitch oder E-Mail Kommunikation") ] }
+            { name: "Anbahnung", cards: [
+                createCardData("Bedarfserkennung / Problem Sensing"),
+                createCardData("Erstgespräch / ROOTS Vorstellung"),
+            ] },
+            { name: "Exploration", cards: [
+                createCardData("Problem Verstehen"),
+                createCardData("Zielstellung klären"),
+                createCardData("Initiale Analyse"),
+                createCardData("Initiale Hypothese(n)"),
+            ] },
+            { name: "Pitch", cards: [
+                createCardData("Projektablauf skizzieren"),
+                createCardData("KVA aufsetzen"),
+                createCardData("Kundenpitch oder E-Mail Kommunikation"),
+            ] },
         ]
     },
     {
-        title: "Track 2: Execution", class: "track-ops",
+        title: "Track 2 – Execution", class: "track-ops",
         phases: [
-            { name: "Ramp-up", cards: [ createCardData("Vertrag"), createCardData("Team-Staffing, Rollenverteilung"), createCardData("Detaillierter Workplan & Projektplan"), createCardData("Zugänge"), createCardData("Daten"), createCardData("Kick-off / Client-Onboarding & Erwartungsmanagement") ] },
-            { name: "Analyse", cards: [ createCardData("Datenanforderung & -erhebung"), createCardData("IST-Analyse"), createCardData("Benchmarking") ] },
-            { name: "Synthese", cards: [ createCardData("„So-What“-Extraktion aus Analysen"), createCardData("Storyline (Pyramid Principle)"), createCardData("Priorisierung"), createCardData("Business-Case"), createCardData("Roadmap & Next Steps"), createCardData("Executive Summary") ] },
-            { name: "Delivery", cards: [ createCardData("Charting"), createCardData("(Steering-Committee) Präsentation(en)"), createCardData("ggf. Q&A im JFX"), createCardData("Elevator Test für kommunikative Stärke der Empfehlung"), createCardData("Auslieferung / Sign-off") ] },
-            { name: "Implementierung", cards: [ createCardData("Capability Building & Training"), createCardData("Change-Management"), createCardData("Governance"), createCardData("Pilot-Design & Durchführung"), createCardData("Monitoring") ] }
+            { name: "Ramp-up", cards: [ createCardWithSteps("Ramp-up", [
+                "Vertrag",
+                "Team-Staffing, Rollenverteilung",
+                "Detaillierter Workplan & Projektplan",
+                "Zugänge",
+                "Daten",
+                "Kick-off / Client-Onboarding & Erwartungsmanagement",
+            ]) ] },
+            { name: "Analyse", cards: [ createCardWithSteps("Analyse", [
+                "Datenanforderung & -erhebung",
+                "IST-Analyse",
+                "Benchmarking",
+            ]) ] },
+            { name: "Synthese", cards: [ createCardWithSteps("Synthese", [
+                "„So-What“-Extraktion aus Analysen",
+                "Storyline (Pyramid Principle)",
+                "Priorisierung",
+                "Business-Case",
+                "Roadmap & Next Steps",
+                "Executive Summary",
+            ]) ] },
+            { name: "Delivery", cards: [ createCardWithSteps("Delivery", [
+                "Charting",
+                "(Steering-Committee) Präsentation(en)",
+                "ggf. Q&A im JFX",
+                "Elevator Test für kommunikative Stärke der Empfehlung",
+                "Auslieferung / Sign-off",
+            ]) ] },
+            { name: "Implementierung", cards: [ createCardWithSteps("Implementierung", [
+                "Capability Building & Training",
+                "Change-Management",
+                "Governance",
+                "Pilot-Design & Durchführung",
+                "Monitoring",
+            ]) ] },
         ]
     },
     {
-        title: "Track 3: Post-Engagement", class: "track-post",
+        title: "Track 3 – Post-Engagement", class: "track-post",
         phases: [
-            { name: "Closeout", cards: [ createCardData("Finale Übergabe"), createCardData("Rechnung"), createCardData("Team-Feedback & Evaluation (NPS)"), createCardData("Internes Review & Learnings"), createCardData("Interne Margin-Analyse") ] },
-            { name: "Follow-up", cards: [ createCardData("KPI-Tracking"), createCardData("Case-Study-Entwicklung"), createCardData("Nachfrage weiterer Beratungsbedarf") ] }
+            { name: "Closeout", cards: [ createCardWithSteps("Closeout", [
+                "Finale Übergabe",
+                "Rechnung",
+                "Team-Feedback & Evaluation (NPS)",
+                "Internes Review & Learnings",
+                "Interne Margin-Analyse",
+            ]) ] },
+            { name: "Follow-up", cards: [ createCardWithSteps("Follow-up", [
+                "KPI-Tracking",
+                "Case-Study-Entwicklung",
+                "Nachfrage weiterer Beratungsbedarf",
+            ]) ] },
         ]
     }
 ];
@@ -63,6 +124,15 @@ let searchDebounceTimer = null;
 let activeInlineEdit = null;
 let sopViewMode = 'edit';
 let readModeIndex = 0;
+let sopNav = { trackIndex: 0, phaseIndex: null };
+let sopNavHover = { trackIndex: null, phaseIndex: null };
+let sopNavRefreshTimer = null;
+
+const SOP_TRACK_NAV_CLASS = {
+    'track-pre': 'sop-nav-track--pre',
+    'track-ops': 'sop-nav-track--ops',
+    'track-post': 'sop-nav-track--post'
+};
 
 // --- TOAST SYSTEM ---
 function showToast(message, type = 'info', undoCallback = null) {
@@ -126,16 +196,16 @@ async function initDashboard() {
     const editBtn = document.getElementById('sop-mode-edit-btn');
     if (readBtn) readBtn.addEventListener('click', () => setSopViewMode('read'));
     if (editBtn) editBtn.addEventListener('click', () => setSopViewMode('edit'));
+    document.getElementById('sop-nav-tree')?.addEventListener('click', handleSopNavClick);
+    setupSopNavHoverSync();
+    setupReadEmbedInteractions();
     document.getElementById('read-mode-prev')?.addEventListener('click', readModePrev);
     document.getElementById('read-mode-next')?.addEventListener('click', readModeNext);
-    window.addEventListener('resize', () => {
-        if (document.body.classList.contains('sop-mode-read')) sizeReadPreviewHeights();
-    });
 }
 
 function setOnlineStatus(online) {
     isOffline = !online;
-    const badge = document.getElementById('sync-status');
+    const badge = document.getElementById('roots-sync-status') || document.getElementById('sync-status');
     if (!badge) return;
     badge.classList.remove('online', 'offline');
     badge.classList.add(online ? 'online' : 'offline');
@@ -245,7 +315,9 @@ function finishInlineEdit(el, target, save = true) {
     el.classList.remove('fa-floppy-disk');
     el.classList.add('fa-pen');
     if (activeInlineEdit && activeInlineEdit.target === target) activeInlineEdit = null;
+    const isNavLabel = target.closest('.track-name') || target.closest('.phase-label');
     saveToLocal();
+    if (isNavLabel) scheduleSopNavRefresh();
 }
 
 function startInlineEdit(el, target, maxLength = 500) {
@@ -840,23 +912,245 @@ function exportHTMLSnapshot() {
 }
 
 // --- RENDER LOGIC ---
+function clampSopNav(data) {
+    if (!data || !data.length) {
+        sopNav = { trackIndex: 0, phaseIndex: null };
+        return;
+    }
+    if (sopNav.trackIndex < 0 || sopNav.trackIndex >= data.length) sopNav.trackIndex = 0;
+    const phases = data[sopNav.trackIndex]?.phases || [];
+    if (sopNav.phaseIndex !== null && (sopNav.phaseIndex < 0 || sopNav.phaseIndex >= phases.length)) {
+        sopNav.phaseIndex = null;
+    }
+}
+
+function getSopTrackNavClass(trackClass) {
+    return SOP_TRACK_NAV_CLASS[trackClass] || '';
+}
+
+function renderSopNavTree(data) {
+    const tree = document.getElementById('sop-nav-tree');
+    if (!tree) return;
+    clampSopNav(data);
+    let html = '';
+    data.forEach((track, tIdx) => {
+        const navClass = getSopTrackNavClass(track.class);
+        const shortTitle = (track.title || '').replace(/^Track\s*\d+\s*:\s*/i, '').trim() || track.title || `Track ${tIdx + 1}`;
+        const trackActive = tIdx === sopNav.trackIndex;
+        html += `<div class="sop-nav-track-group" data-track-group="${tIdx}">
+            <button type="button" class="dash-nav-item ${navClass}${trackActive ? ' active' : ''}${trackActive && sopNav.phaseIndex !== null ? ' sop-nav-parent-active' : ''}" data-nav-type="track" data-track-index="${tIdx}">
+                <i class="fa-solid fa-folder-tree" aria-hidden="true"></i>
+                <span>${escapeHtml(shortTitle)}</span>
+            </button>
+            <div class="sop-nav-phases">`;
+        (track.phases || []).forEach((phase, pIdx) => {
+            const phaseActive = tIdx === sopNav.trackIndex && sopNav.phaseIndex === pIdx;
+            html += `<button type="button" class="dash-nav-item dash-nav-item--sub ${navClass}${phaseActive ? ' active' : ''}" data-nav-type="phase" data-track-index="${tIdx}" data-phase-index="${pIdx}">
+                <i class="fa-solid fa-circle" aria-hidden="true"></i>
+                <span>${escapeHtml(phase.name || `Phase ${pIdx + 1}`)}</span>
+            </button>`;
+        });
+        html += `</div></div>`;
+    });
+    tree.innerHTML = html;
+    applySopNavHoverHighlight();
+}
+
+function applySopNavHoverHighlight() {
+    document.querySelectorAll('#sop-nav-tree [data-nav-type]').forEach(btn => {
+        const tIdx = parseInt(btn.dataset.trackIndex, 10);
+        const isTrack = btn.dataset.navType === 'track';
+        const pIdx = btn.dataset.phaseIndex !== undefined ? parseInt(btn.dataset.phaseIndex, 10) : null;
+        let hover = false;
+        if (sopNavHover.phaseIndex !== null && !Number.isNaN(sopNavHover.phaseIndex)) {
+            hover = isTrack
+                ? tIdx === sopNavHover.trackIndex
+                : tIdx === sopNavHover.trackIndex && pIdx === sopNavHover.phaseIndex;
+        } else if (sopNavHover.trackIndex !== null && !Number.isNaN(sopNavHover.trackIndex)) {
+            hover = isTrack && tIdx === sopNavHover.trackIndex;
+        }
+        btn.classList.toggle('sop-nav-hover', hover);
+    });
+}
+
+function setSopNavHover(trackIndex, phaseIndex = null) {
+    if (Number.isNaN(trackIndex)) return;
+    sopNavHover = { trackIndex, phaseIndex: phaseIndex !== null && !Number.isNaN(phaseIndex) ? phaseIndex : null };
+    applySopNavHoverHighlight();
+}
+
+function clearSopNavHover() {
+    if (sopNavHover.trackIndex === null && sopNavHover.phaseIndex === null) return;
+    sopNavHover = { trackIndex: null, phaseIndex: null };
+    applySopNavHoverHighlight();
+}
+
+function setupSopNavHoverSync() {
+    const board = document.getElementById('main-board');
+    if (!board || board._sopNavHoverBound) return;
+    board._sopNavHoverBound = true;
+
+    board.addEventListener('mouseover', (e) => {
+        if (sopViewMode === 'read') return;
+        const phaseCol = e.target.closest('.phase-col:not(.add-phase-col)');
+        if (phaseCol) {
+            setSopNavHover(
+                parseInt(phaseCol.dataset.trackIndex, 10),
+                parseInt(phaseCol.dataset.phaseIndex, 10)
+            );
+            return;
+        }
+        const track = e.target.closest('.track');
+        if (track) {
+            setSopNavHover(parseInt(track.dataset.trackIndex, 10), null);
+        }
+    });
+
+    board.addEventListener('mouseleave', () => clearSopNavHover());
+}
+
+function updateSopNavActiveStates() {
+    document.querySelectorAll('#sop-nav-tree [data-nav-type]').forEach(btn => {
+        const tIdx = parseInt(btn.dataset.trackIndex, 10);
+        const isTrack = btn.dataset.navType === 'track';
+        const pIdx = btn.dataset.phaseIndex !== undefined ? parseInt(btn.dataset.phaseIndex, 10) : null;
+        const trackSelected = tIdx === sopNav.trackIndex;
+        const active = isTrack
+            ? trackSelected
+            : trackSelected && sopNav.phaseIndex === pIdx;
+        btn.classList.toggle('active', active);
+        btn.classList.toggle('sop-nav-parent-active', isTrack && trackSelected && sopNav.phaseIndex !== null);
+    });
+}
+
+function syncReadModeIndexFromSopNav() {
+    const steps = getReadModeSteps();
+    if (!steps.length) return;
+    let idx = -1;
+    if (sopNav.phaseIndex !== null) {
+        idx = steps.findIndex(s => s.trackIndex === sopNav.trackIndex && s.phaseIndex === sopNav.phaseIndex);
+    } else {
+        idx = steps.findIndex(s => s.trackIndex === sopNav.trackIndex);
+    }
+    if (idx >= 0) readModeIndex = idx;
+}
+
+function syncSopNavFromReadModeIndex() {
+    const steps = getReadModeSteps();
+    const step = steps[readModeIndex];
+    if (!step) return;
+    sopNav.trackIndex = step.trackIndex;
+    sopNav.phaseIndex = step.phaseIndex;
+}
+
+function updateSopNavTitle() {
+    const titleEl = document.getElementById('dash-view-title');
+    const subEl = document.getElementById('dash-view-subtitle');
+    if (!titleEl || !subEl) return;
+    if (sopViewMode === 'read') {
+        const steps = getReadModeSteps();
+        const step = steps[readModeIndex];
+        if (!step) {
+            titleEl.textContent = 'SOP Lesemodus';
+            subEl.textContent = 'Track und Phase wählen';
+            return;
+        }
+        titleEl.textContent = step.trackTitle;
+        subEl.textContent = `${step.phaseName} · Schritt ${readModeIndex + 1} von ${steps.length}`;
+        return;
+    }
+    const data = serializeBoardFromDOM();
+    const track = data[sopNav.trackIndex];
+    if (!track) {
+        titleEl.textContent = 'SOP Dashboard';
+        subEl.textContent = 'Track und Phase wählen';
+        return;
+    }
+    titleEl.textContent = track.title;
+    if (sopNav.phaseIndex === null) {
+        const count = (track.phases || []).length;
+        subEl.textContent = count === 1 ? '1 Phase' : `${count} Phasen`;
+    } else {
+        const phase = track.phases?.[sopNav.phaseIndex];
+        subEl.textContent = phase?.name || 'Phase wählen';
+    }
+}
+
+function applySopNavFilter() {
+    const board = document.getElementById('main-board');
+    if (!board) return;
+    board.querySelectorAll('.track').forEach((trackEl, tIdx) => {
+        const hideTrack = tIdx !== sopNav.trackIndex;
+        trackEl.classList.toggle('sop-nav-filter-hidden', hideTrack);
+        if (hideTrack) return;
+        trackEl.querySelectorAll('.phase-col:not(.add-phase-col)').forEach((phaseEl, pIdx) => {
+            const hidePhase = sopNav.phaseIndex !== null && pIdx !== sopNav.phaseIndex;
+            phaseEl.classList.toggle('sop-nav-filter-hidden', hidePhase);
+        });
+    });
+    board.classList.toggle('sop-single-phase', sopNav.phaseIndex !== null);
+    updateSopNavActiveStates();
+    updateSopNavTitle();
+    if (sopNav.phaseIndex !== null) {
+        const phaseEl = board.querySelector(
+            `.track[data-track-index="${sopNav.trackIndex}"] .phase-col[data-phase-index="${sopNav.phaseIndex}"]`
+        );
+        phaseEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+}
+
+function handleSopNavClick(e) {
+    const btn = e.target.closest('[data-nav-type]');
+    if (!btn) return;
+    clearSopNavHover();
+    const trackIndex = parseInt(btn.dataset.trackIndex, 10);
+    if (Number.isNaN(trackIndex)) return;
+    if (btn.dataset.navType === 'track') {
+        sopNav.trackIndex = trackIndex;
+        sopNav.phaseIndex = null;
+    } else {
+        sopNav.trackIndex = trackIndex;
+        sopNav.phaseIndex = parseInt(btn.dataset.phaseIndex, 10);
+    }
+    if (sopViewMode === 'read') {
+        syncReadModeIndexFromSopNav();
+        updateSopNavActiveStates();
+        updateSopNavTitle();
+        refreshReadModeView();
+    } else {
+        applySopNavFilter();
+    }
+}
+
+function scheduleSopNavRefresh() {
+    clearTimeout(sopNavRefreshTimer);
+    sopNavRefreshTimer = setTimeout(() => {
+        const data = serializeBoardFromDOM();
+        renderSopNavTree(data);
+        applySopNavFilter();
+    }, 150);
+}
+
 function renderBoard(data) {
     const container = document.getElementById('main-board');
     container.innerHTML = '';
     data.forEach((track, tIdx) => {
-        let trackHtml = `<div class="track ${track.class}"><div class="track-header"><div class="track-badge">Track ${tIdx + 1}</div><div class="track-name edit-wrap"><span class="edit-target">${track.title}</span><i class="fa-solid fa-pen edit-pen" onclick="makeEditable(this, event, 100)"></i></div></div>
+        let trackHtml = `<div class="track ${track.class}" data-track-index="${tIdx}"><div class="track-header"><div class="track-badge">Track ${tIdx + 1}</div><div class="track-name edit-wrap"><span class="edit-target">${track.title}</span><i class="fa-solid fa-pen edit-pen" onclick="makeEditable(this, event, 100)"></i></div></div>
         <div class="phases-wrapper">
             <div class="scroll-arrow left" onclick="scrollRow(this, -300)"><i class="fa-solid fa-chevron-left"></i></div>
             <div class="phases-row" onscroll="updateScrollArrows(this)">`;
         if(track.phases) {
-            track.phases.forEach((phase) => {
-                trackHtml += `<div class="phase-col"><div class="phase-label edit-wrap"><span class="edit-target" title="${phase.name}">${phase.name}</span><i class="fa-solid fa-pen edit-pen" onclick="makeEditable(this, event, 40)"></i></div><div class="phase-cards">${renderCards(phase.cards)}<button class="add-entry-btn" onclick="addCard(this)"><i class="fa-solid fa-plus"></i> Neue Karte</button></div></div>`;
+            track.phases.forEach((phase, pIdx) => {
+                trackHtml += `<div class="phase-col" data-track-index="${tIdx}" data-phase-index="${pIdx}"><div class="phase-label edit-wrap"><span class="edit-target" title="${phase.name}">${phase.name}</span><i class="fa-solid fa-pen edit-pen" onclick="makeEditable(this, event, 40)"></i></div><div class="phase-cards">${renderCards(phase.cards)}<button class="add-entry-btn" onclick="addCard(this)"><i class="fa-solid fa-plus"></i> Neue Karte</button></div></div>`;
             });
         }
         trackHtml += `<div class="phase-col add-phase-col" style="justify-content:center; align-items:center; min-width: 200px; padding: 20px;"><button class="add-entry-btn" onclick="addPhase(this)"><i class="fa-solid fa-plus"></i> Phase hinzufügen</button></div>`;
         trackHtml += `</div><div class="scroll-arrow right" onclick="scrollRow(this, 300)"><i class="fa-solid fa-chevron-right"></i></div></div></div>`;
         container.insertAdjacentHTML('beforeend', trackHtml);
     });
+    clampSopNav(data);
+    renderSopNavTree(data);
+    applySopNavFilter();
     updateCardMetaChips();
     updateSectionItemCounts();
     setTimeout(() => { document.querySelectorAll('.phases-row').forEach(updateScrollArrows); }, 100);
@@ -973,9 +1267,13 @@ function openFullscreenFromDOM(btn) {
 function openFullscreen(url, type) {
     const overlay = document.getElementById('fs-overlay');
     const container = document.getElementById('fs-container');
-    if (type === 'image') container.innerHTML = `<img src="${url}" class="fullscreen-content" style="object-fit:contain;">`;
-    else if (type === 'pdf') container.innerHTML = `<embed src="${url}" type="application/pdf" class="fullscreen-content" style="width:90%; height:90%;"></embed>`;
-    else container.innerHTML = `<iframe src="${url}" class="fullscreen-content" style="width:90%; height:90%; background:#fff;"></iframe>`;
+    if (type === 'image') {
+        container.innerHTML = `<img src="${url}" class="fullscreen-content" alt="">`;
+    } else if (type === 'pdf') {
+        container.innerHTML = `<embed src="${url}" type="application/pdf" class="fullscreen-content" title="PDF">`;
+    } else {
+        container.innerHTML = `<iframe src="${url}" class="fullscreen-content" title="Vorschau"></iframe>`;
+    }
     overlay.classList.add('show');
 }
 
@@ -1072,10 +1370,14 @@ function addCard(btn) {
 
 function addPhase(btn) {
     const trackPhasesRow = btn.closest('.phases-row');
-    const newPhaseHtml = `<div class="phase-col"><div class="phase-label edit-wrap"><span class="edit-target" title="Neue Phase">Neue Phase</span><i class="fa-solid fa-pen edit-pen" onclick="makeEditable(this, event, 40)"></i></div><div class="phase-cards"><button class="add-entry-btn" onclick="addCard(this)"><i class="fa-solid fa-plus"></i> Neue Karte</button></div></div>`;
+    const trackEl = btn.closest('.track');
+    const tIdx = trackEl ? parseInt(trackEl.dataset.trackIndex, 10) : 0;
+    const phaseCount = trackEl ? trackEl.querySelectorAll('.phase-col:not(.add-phase-col)').length : 0;
+    const newPhaseHtml = `<div class="phase-col" data-track-index="${tIdx}" data-phase-index="${phaseCount}"><div class="phase-label edit-wrap"><span class="edit-target" title="Neue Phase">Neue Phase</span><i class="fa-solid fa-pen edit-pen" onclick="makeEditable(this, event, 40)"></i></div><div class="phase-cards"><button class="add-entry-btn" onclick="addCard(this)"><i class="fa-solid fa-plus"></i> Neue Karte</button></div></div>`;
     btn.closest('.add-phase-col').insertAdjacentHTML('beforebegin', newPhaseHtml);
     updateScrollArrows(trackPhasesRow);
     saveToLocal();
+    scheduleSopNavRefresh();
 }
 
 function addListItem(btn) {
@@ -1191,99 +1493,108 @@ function getReadModeSteps() {
     return steps;
 }
 
+function buildReadEmbedRow(label, iconClass, actionsHtml, dataAttrs = '') {
+    return `<div class="read-embed-row read-embed-target"${dataAttrs}>
+        <div class="read-embed-meta"><i class="${iconClass}" aria-hidden="true"></i><span class="read-embed-title">${escapeHtml(label)}</span></div>
+        <div class="read-embed-actions">${actionsHtml}</div>
+    </div>`;
+}
+
 function renderReadAttachmentData(att) {
     if (att.type === 'link') {
         const url = att.url || '';
         const label = att.name || url || 'Link';
-        return `<div class="read-full-preview read-full-preview--media read-full-preview--bleed" data-type="link">
-            <iframe class="read-embed" src="${escapeAttr(url)}" loading="lazy" title="${escapeAttr(label)}" onload="iframeLoaded(this)" onerror="showIframeFallback(this)"></iframe>
-            <div class="iframe-fallback" style="display:none; padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;">Einbetten ggf. nicht erlaubt. <a href="${escapeAttr(url)}" target="_blank" rel="noopener" style="color:var(--brand);">Im Tab öffnen</a></div>
-        </div>`;
+        const actions = `<button type="button" class="read-embed-action" data-read-embed-action="toggle">Anzeigen</button>
+            <a class="read-embed-action read-embed-action--link" href="${escapeAttr(url)}" target="_blank" rel="noopener">Neuer Tab</a>`;
+        return buildReadEmbedRow(label, 'fa-solid fa-globe', actions, ` data-embed-kind="link" data-embed-url="${escapeAttr(url)}"`);
     }
     if (att.type === 'file') {
         const mime = att.mime || '';
         const name = att.name || 'Datei';
-        const nameEsc = escapeHtml(name);
         const data = att.data || '';
         const displayUrl = (mime === 'application/pdf') ? createBlobUrl(data, mime) : data;
         if (mime.startsWith('image/')) {
-            return `<div class="read-full-preview read-full-preview--media read-full-preview--bleed"><img class="read-embed" src="${displayUrl}" alt=""></div>`;
+            const actions = `<button type="button" class="read-embed-action" data-read-embed-action="toggle">Anzeigen</button>
+                <a class="read-embed-action read-embed-action--link" href="${escapeAttr(displayUrl)}" target="_blank" rel="noopener">Neuer Tab</a>`;
+            return `<div class="read-embed-block">
+                ${buildReadEmbedRow(name, 'fa-solid fa-image', actions, ` data-embed-kind="image" data-embed-url="${escapeAttr(displayUrl)}"`)}
+                <div class="read-embed-preview"><img class="read-embed-image" src="${displayUrl}" alt="${escapeAttr(name)}"></div>
+            </div>`;
         }
         if (mime === 'application/pdf') {
-            return `<div class="read-full-preview read-full-preview--media read-full-preview--bleed"><embed class="read-embed" src="${displayUrl}" type="application/pdf" title="${escapeAttr(name)}"></div>`;
+            const actions = `<button type="button" class="read-embed-action" data-read-embed-action="toggle">Anzeigen</button>
+                <a class="read-embed-action read-embed-action--link" href="${escapeAttr(displayUrl)}" target="_blank" rel="noopener" download="${escapeAttr(name)}">Download</a>`;
+            return buildReadEmbedRow(name, 'fa-solid fa-file-pdf', actions, ` data-embed-kind="pdf" data-embed-url="${escapeAttr(displayUrl)}"`);
         }
-        return `<div class="read-file-fallback read-full-preview--bleed"><a class="read-file-open" href="${escapeAttr(displayUrl)}" target="_blank" rel="noopener" download="${escapeAttr(name)}"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i><span>Datei öffnen</span></a></div>`;
+        return `<div class="read-file-fallback"><a class="read-file-open" href="${escapeAttr(displayUrl)}" target="_blank" rel="noopener" download="${escapeAttr(name)}"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i><span>${escapeHtml(name)} öffnen</span></a></div>`;
     }
     if (att.type === 'tag') {
-        return `<p style="margin:0.3rem 0 0.5rem 0;"><span style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--status-bg);border-radius:999px;padding:4px 12px;font-size:0.88rem;"><i class="fa-solid fa-tag" style="color:var(--brand);"></i>${escapeHtml(att.name || '')}</span></p>`;
+        return `<span class="read-tag"><i class="fa-solid fa-tag" aria-hidden="true"></i>${escapeHtml(att.name || '')}</span>`;
     }
     if (att.type === 'richtext') {
-        return `<div class="read-richtext-wrap read-full-preview read-full-preview--bleed-text">${sanitizeRichTextHTML(att.html || '')}</div>`;
+        return `<div class="read-richtext-wrap">${sanitizeRichTextHTML(att.html || '')}</div>`;
     }
     return '';
 }
 
+function openReadEmbedFullscreen(target) {
+    if (!target) return;
+    const url = target.dataset.embedUrl || target.closest('.read-embed-block')?.querySelector('.read-embed-image')?.src;
+    if (!url) return;
+    const kind = target.dataset.embedKind || 'link';
+    openFullscreen(url, kind === 'image' ? 'image' : (kind === 'pdf' ? 'pdf' : 'link'));
+}
+
+function setupReadEmbedInteractions() {
+    const body = document.getElementById('read-mode-body');
+    if (!body || body._readEmbedBound) return;
+    body._readEmbedBound = true;
+    body.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-read-embed-action]');
+        if (!btn) return;
+        const target = btn.closest('.read-embed-target');
+        if (!target) return;
+        if (btn.dataset.readEmbedAction === 'toggle') openReadEmbedFullscreen(target);
+    });
+}
+
 function buildReadModeCardHtml(card) {
-    let h = `<article class="read-card-block"><h3 class="read-card-title">${escapeHtml(card.title || '')}</h3>`;
+    let h = `<article class="read-card"><header class="read-card-header"><h3 class="read-card-title">${escapeHtml(card.title || '')}</h3></header><div class="read-card-body">`;
     (card.sections || []).forEach((sec) => {
-        h += `<div class="read-section"><h4 class="read-section-title"><i class="${sec.icon || 'fa-solid fa-file-lines'}" aria-hidden="true"></i> ${escapeHtml(sec.name || '')}</h4><div class="read-section-list">`;
+        h += `<div class="read-field"><div class="read-field-label"><i class="${sec.icon || 'fa-solid fa-file-lines'}" aria-hidden="true"></i> ${escapeHtml(sec.name || '')}</div><ul class="read-item-list">`;
         (sec.items || []).forEach((item) => {
             const atts = (item.attachments || []).map((a) => renderReadAttachmentData(a)).join('');
-            h += `<div class="read-item${atts ? ' read-item--with-attachments' : ''}">`;
-            h += `<div class="read-item-text">${escapeHtml(item.text || '')}</div>`;
+            h += `<li class="read-item-row">`;
+            h += `<div class="read-item-main"><span class="read-item-text">${escapeHtml(item.text || '')}</span></div>`;
             if (atts) h += `<div class="read-item-attachments">${atts}</div>`;
-            h += `</div>`;
+            h += `</li>`;
         });
-        h += `</div></div>`;
+        h += `</ul></div>`;
     });
-    h += `</article>`;
+    h += `</div></article>`;
     return h;
 }
 
 function buildReadModePhaseHtml(step) {
     const cards = step.cards || [];
     if (cards.length === 0) {
-        return '<p class="read-empty" style="text-align:center; color:var(--muted); padding:2.5rem 1rem;">In dieser Phase sind noch keine Karten.</p>';
+        return `<div class="read-phase"><p class="read-empty">In dieser Phase sind noch keine Karten.</p></div>`;
     }
-    return cards.map((c) => buildReadModeCardHtml(c)).join('');
-}
-
-function sizeReadPreviewHeights() {
-    const root = document.getElementById('read-mode-root');
-    if (!root || !document.body.classList.contains('sop-mode-read')) return;
-    const sticky = root.querySelector('.read-mode-sticky');
-    const nav = root.querySelector('.read-nav');
-    const vh = window.innerHeight;
-    const top = sticky ? sticky.getBoundingClientRect().bottom : 0;
-    const navH = nav ? nav.offsetHeight : 56;
-    const margin = 32;
-    const available = Math.max(180, vh - top - navH - margin);
-    const h = Math.max(220, Math.min(580, available * 0.58));
-    root.querySelectorAll('.read-full-preview--media iframe.read-embed, .read-full-preview--media embed.read-embed').forEach((el) => {
-        el.style.height = h + 'px';
-        el.style.minHeight = '0';
-    });
-    root.querySelectorAll('.read-full-preview--media > img.read-embed').forEach((el) => {
-        el.style.maxHeight = h + 'px';
-        el.style.width = '100%';
-    });
+    return `<div class="read-phase"><div class="read-phase-cards">${cards.map((c) => buildReadModeCardHtml(c)).join('')}</div></div>`;
 }
 
 function refreshReadModeView() {
-    const data = serializeBoardFromDOM();
     const steps = getReadModeSteps();
-    const elP = document.getElementById('read-mode-progress');
     const elBody = document.getElementById('read-mode-body');
-    const trackTabs = document.getElementById('read-track-tabs');
-    const phaseTabs = document.getElementById('read-phase-tabs');
     const prevBtn = document.getElementById('read-mode-prev');
     const nextBtn = document.getElementById('read-mode-next');
     if (!elBody) return;
+    syncSopNavFromReadModeIndex();
+    renderSopNavTree(serializeBoardFromDOM());
+    updateSopNavActiveStates();
+    updateSopNavTitle();
     if (steps.length === 0) {
-        if (elP) { elP.textContent = '—'; elP.setAttribute('title', ''); }
-        if (trackTabs) trackTabs.innerHTML = '';
-        if (phaseTabs) phaseTabs.innerHTML = '';
-        elBody.innerHTML = '<p class="read-empty" style="text-align:center; color:var(--muted); padding:2.5rem 1rem;">Noch kein SOP-Inhalt – wechsle in den Bearbeiten-Modus.</p>';
+        elBody.innerHTML = '<div class="read-body-inner"><div class="read-phase"><p class="read-empty">Noch kein SOP-Inhalt – wechsle in den Bearbeiten-Modus.</p></div></div>';
         if (prevBtn) prevBtn.disabled = true;
         if (nextBtn) nextBtn.disabled = true;
         return;
@@ -1291,63 +1602,28 @@ function refreshReadModeView() {
     if (readModeIndex >= steps.length) readModeIndex = steps.length - 1;
     if (readModeIndex < 0) readModeIndex = 0;
     const step = steps[readModeIndex];
-    if (elP) {
-        const cur = readModeIndex + 1;
-        const tot = steps.length;
-        elP.textContent = `${cur} / ${tot}`;
-        elP.setAttribute('title', `Schritt ${cur} von ${tot}`);
-    }
 
-    if (trackTabs && data && data.length) {
-        trackTabs.innerHTML = '';
-        data.forEach((tr, ti) => {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'read-tab read-tab--track ' + (tr.class || 'track-pre') + (step.trackIndex === ti ? ' read-tab--active' : '');
-            b.setAttribute('role', 'tab');
-            b.setAttribute('aria-selected', step.trackIndex === ti ? 'true' : 'false');
-            b.textContent = tr.title || `Track ${ti + 1}`;
-            b.addEventListener('click', () => {
-                const idx = steps.findIndex(s => s.trackIndex === ti);
-                if (idx >= 0) { readModeIndex = idx; refreshReadModeView(); }
-            });
-            trackTabs.appendChild(b);
-        });
-    }
-    if (phaseTabs) {
-        phaseTabs.innerHTML = '';
-        steps.forEach((s, flatIdx) => {
-            if (s.trackIndex !== step.trackIndex) return;
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'read-tab read-tab--phase' + (flatIdx === readModeIndex ? ' read-tab--active' : '');
-            b.setAttribute('role', 'tab');
-            b.setAttribute('aria-selected', flatIdx === readModeIndex ? 'true' : 'false');
-            b.textContent = s.phaseName;
-            b.title = s.phaseName;
-            b.addEventListener('click', () => { readModeIndex = flatIdx; refreshReadModeView(); });
-            phaseTabs.appendChild(b);
-        });
-    }
-
-    elBody.innerHTML = buildReadModePhaseHtml(step);
+    elBody.innerHTML = `<div class="read-body-inner">${buildReadModePhaseHtml(step)}</div>`;
     if (prevBtn) prevBtn.disabled = readModeIndex === 0;
     if (nextBtn) nextBtn.disabled = readModeIndex >= steps.length - 1;
     elBody.scrollTop = 0;
-    const aTr = trackTabs && trackTabs.querySelector('.read-tab--active');
-    if (aTr) aTr.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-    const aPh = phaseTabs && phaseTabs.querySelector('.read-tab--active');
-    if (aPh) aPh.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-    requestAnimationFrame(() => { requestAnimationFrame(() => { sizeReadPreviewHeights(); }); });
 }
 
 function readModePrev() {
-    if (readModeIndex > 0) { readModeIndex--; refreshReadModeView(); }
+    if (readModeIndex > 0) {
+        readModeIndex--;
+        syncSopNavFromReadModeIndex();
+        refreshReadModeView();
+    }
 }
 
 function readModeNext() {
     const steps = getReadModeSteps();
-    if (readModeIndex < steps.length - 1) { readModeIndex++; refreshReadModeView(); }
+    if (readModeIndex < steps.length - 1) {
+        readModeIndex++;
+        syncSopNavFromReadModeIndex();
+        refreshReadModeView();
+    }
 }
 
 function setSopViewMode(mode) {
@@ -1358,7 +1634,17 @@ function setSopViewMode(mode) {
     const eb = document.getElementById('sop-mode-edit-btn');
     if (rb) rb.setAttribute('aria-pressed', isRead);
     if (eb) eb.setAttribute('aria-pressed', !isRead);
-    if (isRead) { readModeIndex = 0; refreshReadModeView(); }
+    if (isRead) {
+        syncReadModeIndexFromSopNav();
+        renderSopNavTree(serializeBoardFromDOM());
+        updateSopNavActiveStates();
+        updateSopNavTitle();
+        refreshReadModeView();
+    } else {
+        clearSopNavHover();
+        renderSopNavTree(serializeBoardFromDOM());
+        applySopNavFilter();
+    }
 }
 
 // --- DROPDOWN / MENU ---
