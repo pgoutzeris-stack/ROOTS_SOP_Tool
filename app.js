@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://PGoutzeris.pythonanywhere.com';
+function sb() { return window.__rootsSupabaseClient; }
 
 function createBlobUrl(base64Data, mimeType) {
     try {
@@ -117,7 +117,9 @@ const DEFAULT_DATA = [
 
 let isOffline = false;
 let originalEditContent = "";
-let lastLoadTimestamp = null;
+let lastLoadedRevisionId = null;
+let lastLoadedRevisionAt = null;
+let sopBootDone = false;
 let activeRichTextEditor = null;
 let pendingRichTextControl = null;
 let searchDebounceTimer = null;
@@ -165,42 +167,121 @@ function loadFromLocal() {
     return saved ? JSON.parse(saved) : null;
 }
 
-// --- INITIALIZATION ---
-async function initDashboard() {
-    const localData = loadFromLocal();
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/latest`);
-        const result = await response.json();
-        if (result.status === 'success' && result.data && result.data.length > 0) {
-            renderBoard(result.data);
-            lastLoadTimestamp = result.timestamp || Date.now();
-        } else {
-            renderBoard(DEFAULT_DATA);
-        }
-        setOnlineStatus(true);
-    } catch (error) {
+function fmtRevisionDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+}
+
+function showBoardLoading(message = 'SOP wird geladen…') {
+    const board = document.getElementById('main-board');
+    if (!board) return;
+    board.innerHTML = `<div style="text-align:center;padding:50px"><i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;color:var(--brand)"></i><p style="margin-top:1rem;color:var(--muted);font-size:.9rem">${message}</p></div>`;
+}
+
+function applyRevisionSnapshot(snapshot, meta = {}) {
+    if (!Array.isArray(snapshot) || snapshot.length === 0) {
+        renderBoard(DEFAULT_DATA);
+        return false;
+    }
+    renderBoard(snapshot);
+    saveToLocal();
+    lastLoadedRevisionId = meta.id || null;
+    lastLoadedRevisionAt = meta.created_at || null;
+    return true;
+}
+
+async function loadLatestRevision() {
+    const client = sb();
+    if (!client) {
         setOnlineStatus(false);
-        renderBoard(localData || DEFAULT_DATA);
-        showToast("Offline-Modus. Änderungen werden lokal gespeichert.", "error");
+        renderBoard(loadFromLocal() || DEFAULT_DATA);
+        showToast('Supabase nicht verbunden. Lokale Kopie geladen.', 'error');
+        return;
     }
 
-    document.getElementById('main-board').addEventListener('input', saveToLocal);
-    document.getElementById('rt-fullscreen-toolbar').innerHTML = buildRichTextToolbar(false, false);
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) {
+        showBoardLoading('Bitte anmelden…');
+        return;
+    }
+
+    showBoardLoading();
+
+    try {
+        const { data, error } = await client
+            .from('sop_revisions')
+            .select('id, snapshot, created_at, label, author_name')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (data && applyRevisionSnapshot(data.snapshot, data)) {
+            setOnlineStatus(true);
+            return;
+        }
+
+        setOnlineStatus(true);
+        renderBoard(DEFAULT_DATA);
+        saveToLocal();
+    } catch (error) {
+        console.error('loadLatestRevision', error);
+        setOnlineStatus(false);
+        const localData = loadFromLocal();
+        renderBoard(localData || DEFAULT_DATA);
+        showToast('Cloud-Laden fehlgeschlagen. Lokale Kopie wird angezeigt.', 'error');
+    }
+}
+
+function setupDashboardUI() {
+    const board = document.getElementById('main-board');
+    if (board && !board._sopInputBound) {
+        board._sopInputBound = true;
+        board.addEventListener('input', saveToLocal);
+    }
+    const rtToolbar = document.getElementById('rt-fullscreen-toolbar');
+    if (rtToolbar) rtToolbar.innerHTML = buildRichTextToolbar(false, false);
     setupInlineEditMouseFix();
     document.addEventListener('paste', handleEditorPaste);
     document.addEventListener('keydown', handleGlobalKeydown);
     checkOnboarding();
-    setInterval(pollForChanges, 30000);
+    if (!window._sopPollInterval) {
+        window._sopPollInterval = setInterval(pollForChanges, 30000);
+    }
 
     const readBtn = document.getElementById('sop-mode-read-btn');
     const editBtn = document.getElementById('sop-mode-edit-btn');
-    if (readBtn) readBtn.addEventListener('click', () => setSopViewMode('read'));
-    if (editBtn) editBtn.addEventListener('click', () => setSopViewMode('edit'));
-    document.getElementById('sop-nav-tree')?.addEventListener('click', handleSopNavClick);
+    if (readBtn && !readBtn._sopBound) {
+        readBtn._sopBound = true;
+        readBtn.addEventListener('click', () => setSopViewMode('read'));
+    }
+    if (editBtn && !editBtn._sopBound) {
+        editBtn._sopBound = true;
+        editBtn.addEventListener('click', () => setSopViewMode('edit'));
+    }
+    const navTree = document.getElementById('sop-nav-tree');
+    if (navTree && !navTree._sopBound) {
+        navTree._sopBound = true;
+        navTree.addEventListener('click', handleSopNavClick);
+    }
     setupSopNavHoverSync();
     setupReadEmbedInteractions();
     document.getElementById('read-mode-prev')?.addEventListener('click', readModePrev);
     document.getElementById('read-mode-next')?.addEventListener('click', readModeNext);
+}
+
+function initDashboard() {
+    setupDashboardUI();
+    showBoardLoading();
+}
+
+function bootSopAfterAuth() {
+    if (sopBootDone) return;
+    sopBootDone = true;
+    loadLatestRevision();
 }
 
 function setOnlineStatus(online) {
@@ -217,6 +298,19 @@ function setOnlineStatus(online) {
 
 document.addEventListener('DOMContentLoaded', initDashboard);
 
+const _origRootsLoadAndMount = window.RootsUser?._loadAndMount?.bind(window.RootsUser);
+if (window.RootsUser && _origRootsLoadAndMount) {
+    window.RootsUser._loadAndMount = async function (client) {
+        await _origRootsLoadAndMount(client);
+        bootSopAfterAuth();
+    };
+}
+document.addEventListener('DOMContentLoaded', () => {
+    sb()?.auth.getSession().then(({ data: { session } }) => {
+        if (session) bootSopAfterAuth();
+    });
+});
+
 function setupInlineEditMouseFix() {
     document.addEventListener('mousedown', (e) => {
         const editBtn = e.target.closest('.edit-pen, .edit-title-icon, .edit-item-icon');
@@ -226,15 +320,24 @@ function setupInlineEditMouseFix() {
 
 // --- COLLABORATION POLLING ---
 async function pollForChanges() {
-    if (isOffline) return;
+    const client = sb();
+    if (!client || isOffline) return;
     try {
-        const response = await fetch(`${API_BASE_URL}/api/latest`);
-        const result = await response.json();
-        if (result.status === 'success' && result.timestamp && result.timestamp !== lastLoadTimestamp) {
-            showToast("Eine neuere Version ist verfügbar!", "info", () => { location.reload(); });
-            lastLoadTimestamp = result.timestamp;
+        const { data: { session } } = await client.auth.getSession();
+        if (!session) return;
+        const { data, error } = await client
+            .from('sop_revisions')
+            .select('id, created_at')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        if (error || !data) return;
+        if (lastLoadedRevisionId && data.id !== lastLoadedRevisionId) {
+            showToast('Eine neuere Version ist verfügbar!', 'info', () => { location.reload(); });
+        } else if (!lastLoadedRevisionId && data.created_at && data.created_at !== lastLoadedRevisionAt) {
+            showToast('Eine neuere Version ist verfügbar!', 'info', () => { location.reload(); });
         }
-    } catch(e) {}
+    } catch (e) { /* ignore poll errors */ }
 }
 
 // --- ONBOARDING ---
@@ -1326,17 +1429,31 @@ function handleItemAttach(type) {
 }
 
 async function restoreRevision(id) {
-    if (!confirm("Alte Version laden? Ungespeicherte Änderungen gehen verloren.")) return;
+    if (!confirm('Diese Version laden? Ungespeicherte Änderungen gehen verloren.')) return;
+    const client = sb();
+    if (!client) { showToast('Supabase nicht verbunden.', 'error'); return; }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/api/load/${id}`);
-        const result = await response.json();
-        if (result.status === 'success' && result.data && result.data.length > 0) {
-            renderBoard(result.data);
-            saveToLocal();
-            document.getElementById('revision-modal').style.display = 'none';
-            showToast("Version erfolgreich geladen.", "success");
+        const { data, error } = await client
+            .from('sop_revisions')
+            .select('id, snapshot, created_at, author_name')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        if (!data || !Array.isArray(data.snapshot) || data.snapshot.length === 0) {
+            showToast('Ungültiges Snapshot-Format.', 'error');
+            return;
         }
-    } catch (error) { showToast("Fehler beim Laden der Version.", "error"); }
+
+        applyRevisionSnapshot(data.snapshot, data);
+        document.getElementById('revision-modal').style.display = 'none';
+        setOnlineStatus(true);
+        showToast(`Version von ${data.author_name || 'Unbekannt'} geladen.`, 'success');
+    } catch (error) {
+        console.error('restoreRevision', error);
+        showToast('Fehler beim Laden der Version.', 'error');
+    }
 }
 
 function updateCardMetaChips() {
@@ -1389,31 +1506,54 @@ function addListItem(btn) {
 
 // --- CLOUD SAVE ---
 function saveRevisionToCloud() {
-    if(isOffline) { showToast("Offline: Speichern in der Cloud nicht möglich.", "error"); return; }
-    document.getElementById('modal-author-name').value = '';
+    if (isOffline) { showToast('Offline: Speichern in der Cloud nicht möglich.', 'error'); return; }
+    const input = document.getElementById('modal-author-name');
+    const profile = window.RootsUser?.getProfile?.();
+    if (input) input.value = profile?.full_name || '';
     document.getElementById('save-modal').style.display = 'flex';
-    document.getElementById('modal-author-name').focus();
+    setTimeout(() => input?.focus(), 80);
 }
 
 async function confirmSaveRevision() {
-    const authorName = document.getElementById('modal-author-name').value.trim();
-    if (!authorName) { showToast("Bitte einen Namen eingeben.", "error"); return; }
+    const authorName = document.getElementById('modal-author-name')?.value.trim();
+    if (!authorName) { showToast('Bitte einen Namen eingeben.', 'error'); return; }
+    const client = sb();
+    if (!client) { showToast('Supabase nicht verbunden.', 'error'); return; }
+
     closeModal('save-modal');
     const btn = document.getElementById('main-save-btn');
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Speichere...';
+    const btnHtml = btn ? btn.innerHTML : '';
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Speichere...';
+
     try {
-        const response = await fetch(`${API_BASE_URL}/api/save`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: serializeBoardFromDOM(), author: authorName, timestamp: new Date().toLocaleString('de-DE') })
+        const snapshot = serializeBoardFromDOM();
+        const authorId = window.RootsUser?.getProfile?.()?.id || null;
+        const tsLabel = new Date().toLocaleDateString('de-DE', {
+            day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
         });
-        if(response.ok) {
+
+        const { data, error } = await client.from('sop_revisions').insert({
+            author_name: authorName,
+            author_id: authorId,
+            label: `${authorName} · ${tsLabel}`,
+            snapshot
+        }).select('id, created_at').single();
+
+        if (error) throw error;
+
+        lastLoadedRevisionId = data.id;
+        lastLoadedRevisionAt = data.created_at;
+        saveToLocal();
+        setOnlineStatus(true);
+        if (btn) {
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Gespeichert';
-            showToast("Erfolgreich in der Cloud gespeichert!", "success");
-            setTimeout(() => btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Speichern', 3000);
+            setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Speichern'; }, 3000);
         }
+        showToast('Erfolgreich in der Cloud gespeichert!', 'success');
     } catch (e) {
-        showToast("Speichern fehlgeschlagen.", "error");
-        btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Speichern';
+        console.error('confirmSaveRevision', e);
+        showToast('Speichern fehlgeschlagen: ' + (e.message || 'Unbekannter Fehler'), 'error');
+        if (btn) btn.innerHTML = btnHtml || '<i class="fa-solid fa-cloud-arrow-up"></i> Speichern';
     }
 }
 
@@ -1422,17 +1562,42 @@ async function openRevisions() {
     const listEl = document.getElementById('revision-list');
     listEl.innerHTML = '<div style="text-align:center; padding: 20px;"><i class="fa-solid fa-spinner fa-spin"></i></div>';
     document.getElementById('revision-modal').style.display = 'flex';
+
+    const client = sb();
+    if (!client) {
+        listEl.innerHTML = '<p style="color:var(--danger); padding: 10px;">Supabase nicht verbunden.</p>';
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/api/history`);
-        const result = await response.json();
+        const { data, error } = await client
+            .from('sop_revisions')
+            .select('id, author_name, label, created_at')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+
         listEl.innerHTML = '';
-        if(result.history && result.history.length > 0) {
-            result.history.forEach((rev, index) => {
-                const isCurrent = index === 0 ? '<span style="color:var(--brand); font-weight:bold; font-size:0.8rem; margin-left:10px;">(Aktuell)</span>' : '';
-                listEl.insertAdjacentHTML('beforeend', `<div class="revision-item"><div class="revision-header"><div class="rev-date"><i class="fa-regular fa-clock"></i> ${rev.timestamp} <span style="background:var(--brand-light); color:var(--brand-dark); padding:2px 8px; border-radius:999px; font-size:0.75rem;"><i class="fa-solid fa-user"></i> ${rev.author || 'Unbekannt'}</span> ${isCurrent}</div><button class="rev-restore-btn" onclick="restoreRevision(${rev.id})">Laden</button></div></div>`);
-            });
-        } else { listEl.innerHTML = '<p style="padding: 10px;">Keine Versionen.</p>'; }
-    } catch (error) { listEl.innerHTML = '<p style="color:var(--danger); padding: 10px;">Konnte Verlauf nicht laden.</p>'; }
+        if (!data || data.length === 0) {
+            listEl.innerHTML = '<p style="padding: 10px;">Keine Versionen.</p>';
+            return;
+        }
+
+        data.forEach((rev, index) => {
+            const isCurrent = (rev.id === lastLoadedRevisionId) || (index === 0 && !lastLoadedRevisionId)
+                ? '<span style="color:var(--brand); font-weight:bold; font-size:0.8rem; margin-left:10px;">(Aktuell)</span>'
+                : '';
+            const dateStr = fmtRevisionDate(rev.created_at);
+            const restoreBtn = index === 0 && rev.id === lastLoadedRevisionId
+                ? ''
+                : `<button class="rev-restore-btn" onclick="restoreRevision('${rev.id}')">Laden</button>`;
+            listEl.insertAdjacentHTML('beforeend', `<div class="revision-item"><div class="revision-header"><div class="rev-date"><i class="fa-regular fa-clock"></i> ${dateStr} <span style="background:var(--brand-light); color:var(--brand-dark); padding:2px 8px; border-radius:999px; font-size:0.75rem;"><i class="fa-solid fa-user"></i> ${rev.author_name || 'Unbekannt'}</span> ${isCurrent}</div>${restoreBtn}</div></div>`);
+        });
+    } catch (error) {
+        console.error('openRevisions', error);
+        listEl.innerHTML = '<p style="color:var(--danger); padding: 10px;">Konnte Verlauf nicht laden.</p>';
+    }
 }
 
 // --- SERIALIZE ---
