@@ -981,14 +981,22 @@
     </div>
 </div>
 
+<script>
+try {
+  if (window.self !== window.top && new URLSearchParams(window.location.search).get('authBroker') === 'v1') {
+    window.ROOTS_TOKENLESS_EMBED = true;
+  }
+} catch (_) {}
+</script>
+<script src="https://pgoutzeris-stack.github.io/ROOTS_Intranet/roots-user-bridge.js?v=20260722-sop"></script>
 <script src="app.js"></script>
 <script>
 (function(){
+  const tokenless=window.RootsUserBridge?.TOKENLESS_EMBED===true;
   const SB_URL='https://csmguwcvzreefluhahyu.supabase.co';
   const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzbWd1d2N2enJlZWZsdWhhaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NjM0ODcsImV4cCI6MjA5MjUzOTQ4N30.Fiafx7XBaQZXUX3bKQIBH7znBHx3B51yL-bftOHsL4Q';
-  const {createClient}=window.supabase;
-  const sb=createClient(SB_URL,SB_ANON);
-  window.__rootsSupabaseClient=sb;
+  const sb=tokenless?null:window.supabase.createClient(SB_URL,SB_ANON);
+  if(sb)window.__rootsSupabaseClient=sb;
   const overlay=document.getElementById('roots-auth-overlay');
   const vLogin=document.getElementById('roots-view-login');
   const vForgot=document.getElementById('roots-view-forgot');
@@ -1009,6 +1017,17 @@
   }
   function hideAuthOverlay(){
     if(overlay)overlay.style.display='none';
+  }
+  if(tokenless){
+    window.RootsUserBridge.request('user-context').then((context)=>{
+      if(!context?.user?.id)throw new Error('Nicht angemeldet');
+      hideAuthOverlay();
+      window.RootsUser._uid=context.user.id;
+      window.RootsUser._p=context.profile||{id:context.user.id,email:context.user.email,app_role:'reader'};
+      window.RootsUser._mount();
+      window.bootSopAfterAuth?.();
+    }).catch(()=>showAuthOverlay());
+    return;
   }
   sb.auth.getSession().then(({data:{session}})=>{
     if(session){hideAuthOverlay();window.RootsUser._loadAndMount(sb);}
