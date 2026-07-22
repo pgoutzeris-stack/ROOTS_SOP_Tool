@@ -12,6 +12,13 @@ function rootsPrompt(o){o=o||{};return new Promise(function(res){_rootsDlgEnsure
 
 function sb() { return window.__rootsSupabaseClient; }
 
+const SOP_TOKENLESS = window.RootsUserBridge?.TOKENLESS_EMBED === true;
+
+async function sopBroker(payload) {
+    if (!SOP_TOKENLESS) throw new Error('Broker ist nicht aktiv');
+    return window.RootsUserBridge.request('sop', payload);
+}
+
 function createBlobUrl(base64Data, mimeType) {
     try {
         const byteString = atob(base64Data.split(',')[1]);
@@ -206,30 +213,30 @@ function applyRevisionSnapshot(snapshot, meta = {}) {
 
 async function loadLatestRevision() {
     const client = sb();
-    if (!client) {
+    if (!client && !SOP_TOKENLESS) {
         setOnlineStatus(false);
         renderBoard(loadFromLocal() || DEFAULT_DATA);
         showToast('Supabase nicht verbunden. Lokale Kopie geladen.', 'error');
         return;
     }
 
-    const { data: { session } } = await client.auth.getSession();
-    if (!session) {
-        showBoardLoading('Bitte anmelden…');
-        return;
+    if (!SOP_TOKENLESS) {
+        const { data: { session } } = await client.auth.getSession();
+        if (!session) { showBoardLoading('Bitte anmelden…'); return; }
     }
 
     showBoardLoading();
 
     try {
-        const { data, error } = await client
-            .from('sop_revisions')
-            .select('id, snapshot, created_at, label, author_name')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-        if (error) throw error;
+        let data;
+        if (SOP_TOKENLESS) data = await sopBroker({ action: 'latest' });
+        else {
+            const result = await client.from('sop_revisions')
+                .select('id, snapshot, created_at, label, author_name')
+                .order('created_at', { ascending: false }).limit(1).maybeSingle();
+            if (result.error) throw result.error;
+            data = result.data;
+        }
 
         if (data && applyRevisionSnapshot(data.snapshot, data)) {
             setOnlineStatus(true);
@@ -333,17 +340,19 @@ function setupInlineEditMouseFix() {
 // --- COLLABORATION POLLING ---
 async function pollForChanges() {
     const client = sb();
-    if (!client || isOffline) return;
+    if ((!client && !SOP_TOKENLESS) || isOffline) return;
     try {
-        const { data: { session } } = await client.auth.getSession();
-        if (!session) return;
-        const { data, error } = await client
-            .from('sop_revisions')
-            .select('id, created_at')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-        if (error || !data) return;
+        let data;
+        if (SOP_TOKENLESS) data = await sopBroker({ action: 'head' });
+        else {
+            const { data: sessionData } = await client.auth.getSession();
+            if (!sessionData.session) return;
+            const result = await client.from('sop_revisions').select('id, created_at')
+                .order('created_at', { ascending: false }).limit(1).maybeSingle();
+            if (result.error) return;
+            data = result.data;
+        }
+        if (!data) return;
         if (lastLoadedRevisionId && data.id !== lastLoadedRevisionId) {
             showToast('Eine neuere Version ist verfügbar!', 'info', () => { location.reload(); });
         } else if (!lastLoadedRevisionId && data.created_at && data.created_at !== lastLoadedRevisionAt) {
@@ -1443,16 +1452,17 @@ function handleItemAttach(type) {
 async function restoreRevision(id) {
     if (!await rootsConfirm({ title: 'Version laden?', desc: 'Ungespeicherte Änderungen gehen verloren.', okLabel: 'Laden', variant: 'warning', icon: 'fa-clock-rotate-left' })) return;
     const client = sb();
-    if (!client) { showToast('Supabase nicht verbunden.', 'error'); return; }
+    if (!client && !SOP_TOKENLESS) { showToast('Supabase nicht verbunden.', 'error'); return; }
 
     try {
-        const { data, error } = await client
-            .from('sop_revisions')
-            .select('id, snapshot, created_at, author_name')
-            .eq('id', id)
-            .single();
-
-        if (error) throw error;
+        let data;
+        if (SOP_TOKENLESS) data = await sopBroker({ action: 'get', id });
+        else {
+            const result = await client.from('sop_revisions')
+                .select('id, snapshot, created_at, author_name').eq('id', id).single();
+            if (result.error) throw result.error;
+            data = result.data;
+        }
         if (!data || !Array.isArray(data.snapshot) || data.snapshot.length === 0) {
             showToast('Ungültiges Snapshot-Format.', 'error');
             return;
@@ -1530,7 +1540,7 @@ async function confirmSaveRevision() {
     const authorName = document.getElementById('modal-author-name')?.value.trim();
     if (!authorName) { showToast('Bitte einen Namen eingeben.', 'error'); return; }
     const client = sb();
-    if (!client) { showToast('Supabase nicht verbunden.', 'error'); return; }
+    if (!client && !SOP_TOKENLESS) { showToast('Supabase nicht verbunden.', 'error'); return; }
 
     closeModal('save-modal');
     const btn = document.getElementById('main-save-btn');
@@ -1544,14 +1554,16 @@ async function confirmSaveRevision() {
             day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
         });
 
-        const { data, error } = await client.from('sop_revisions').insert({
-            author_name: authorName,
-            author_id: authorId,
-            label: `${authorName} · ${tsLabel}`,
-            snapshot
-        }).select('id, created_at').single();
-
-        if (error) throw error;
+        let data;
+        if (SOP_TOKENLESS) data = await sopBroker({ action: 'create', snapshot });
+        else {
+            const result = await client.from('sop_revisions').insert({
+                author_name: authorName, author_id: authorId,
+                label: `${authorName} · ${tsLabel}`, snapshot
+            }).select('id, created_at').single();
+            if (result.error) throw result.error;
+            data = result.data;
+        }
 
         lastLoadedRevisionId = data.id;
         lastLoadedRevisionAt = data.created_at;
@@ -1576,19 +1588,21 @@ async function openRevisions() {
     document.getElementById('revision-modal').style.display = 'flex';
 
     const client = sb();
-    if (!client) {
+    if (!client && !SOP_TOKENLESS) {
         listEl.innerHTML = '<p style="color:var(--danger); padding: 10px;">Supabase nicht verbunden.</p>';
         return;
     }
 
     try {
-        const { data, error } = await client
-            .from('sop_revisions')
-            .select('id, author_name, label, created_at')
-            .order('created_at', { ascending: false })
-            .limit(50);
-
-        if (error) throw error;
+        let data;
+        if (SOP_TOKENLESS) data = await sopBroker({ action: 'list' });
+        else {
+            const result = await client.from('sop_revisions')
+                .select('id, author_name, label, created_at')
+                .order('created_at', { ascending: false }).limit(50);
+            if (result.error) throw result.error;
+            data = result.data;
+        }
 
         listEl.innerHTML = '';
         if (!data || data.length === 0) {
