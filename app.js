@@ -176,14 +176,18 @@ function showToast(message, type = 'info', undoCallback = null) {
 // --- LOCAL STORAGE AUTO-SAVE ---
 function saveToLocal() {
     const data = serializeBoardFromDOM();
-    localStorage.setItem('roots_sop_autosave_v2', JSON.stringify(data));
+    try { localStorage.setItem('roots_sop_autosave_v2', JSON.stringify(data)); } catch (_) { /* sandboxed iframe: no localStorage */ }
     updateSectionItemCounts();
     updateCardMetaChips();
 }
 
 function loadFromLocal() {
-    const saved = localStorage.getItem('roots_sop_autosave_v2');
-    return saved ? JSON.parse(saved) : null;
+    try {
+        const saved = localStorage.getItem('roots_sop_autosave_v2');
+        return saved ? JSON.parse(saved) : null;
+    } catch (_) {
+        return null;
+    }
 }
 
 function fmtRevisionDate(iso) {
@@ -363,10 +367,12 @@ async function pollForChanges() {
 
 // --- ONBOARDING ---
 function checkOnboarding() {
-    if (!localStorage.getItem('roots_sop_onboarding_done')) {
-        showToast("Willkommen! Klicke auf die Stift-Icons, um Texte zu bearbeiten.", "info");
-        localStorage.setItem('roots_sop_onboarding_done', 'true');
-    }
+    try {
+        if (!localStorage.getItem('roots_sop_onboarding_done')) {
+            showToast("Willkommen! Klicke auf die Stift-Icons, um Texte zu bearbeiten.", "info");
+            localStorage.setItem('roots_sop_onboarding_done', 'true');
+        }
+    } catch (_) { /* sandboxed iframe: no localStorage */ }
 }
 
 // --- ESCAPE & KEYDOWN HANDLING ---
