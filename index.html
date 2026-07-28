@@ -988,14 +988,22 @@ try {
   }
 } catch (_) {}
 </script>
-<script src="https://pgoutzeris-stack.github.io/ROOTS_Intranet/roots-user-bridge.js?v=20260722-sop"></script>
+<script src="https://pgoutzeris-stack.github.io/ROOTS_Intranet/roots-user-bridge.js?v=20260728-identity-guard-v1"></script>
 <script src="app.js"></script>
 <script>
 (function(){
   const tokenless=window.RootsUserBridge?.TOKENLESS_EMBED===true;
   const SB_URL='https://csmguwcvzreefluhahyu.supabase.co';
   const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzbWd1d2N2enJlZWZsdWhhaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NjM0ODcsImV4cCI6MjA5MjUzOTQ4N30.Fiafx7XBaQZXUX3bKQIBH7znBHx3B51yL-bftOHsL4Q';
-  const sb=tokenless?null:window.supabase.createClient(SB_URL,SB_ANON);
+  const {createClient}=window.supabase;
+  const embedded=window.parent!==window;
+  const sb=tokenless?null:createClient(SB_URL,SB_ANON,{
+    auth:{
+      persistSession:!embedded,
+      autoRefreshToken:!embedded,
+      detectSessionInUrl:!embedded,
+    },
+  });
   if(sb)window.__rootsSupabaseClient=sb;
   const overlay=document.getElementById('roots-auth-overlay');
   const vLogin=document.getElementById('roots-view-login');
@@ -1296,6 +1304,5 @@ window.RootsUser = window.RootsUser || {
   }
 };
 </script>
-<script src="https://pgoutzeris-stack.github.io/ROOTS_Intranet/roots-user-bridge.js?v=20260522-hover"></script>
 </body>
 </html>
