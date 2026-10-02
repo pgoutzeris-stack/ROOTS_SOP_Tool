@@ -56,7 +56,7 @@ const createCardWithSteps = (title, steps) => {
 
 const DEFAULT_DATA = [
     {
-        title: "Track 1 – Pre-Engagement", class: "track-pre",
+        title: "Track 1 - Pre-Engagement", class: "track-pre",
         phases: [
             { name: "Anbahnung", cards: [
                 createCardData("Bedarfserkennung / Problem Sensing"),
@@ -76,7 +76,7 @@ const DEFAULT_DATA = [
         ]
     },
     {
-        title: "Track 2 – Execution", class: "track-ops",
+        title: "Track 2 - Execution", class: "track-ops",
         phases: [
             { name: "Ramp-up", cards: [ createCardWithSteps("Ramp-up", [
                 "Vertrag",
@@ -116,7 +116,7 @@ const DEFAULT_DATA = [
         ]
     },
     {
-        title: "Track 3 – Post-Engagement", class: "track-post",
+        title: "Track 3 - Post-Engagement", class: "track-post",
         phases: [
             { name: "Closeout", cards: [ createCardWithSteps("Closeout", [
                 "Finale Übergabe",
@@ -191,7 +191,7 @@ function loadFromLocal() {
 }
 
 function fmtRevisionDate(iso) {
-    if (!iso) return '—';
+    if (!iso) return '-';
     const d = new Date(iso);
     return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
         + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -313,7 +313,7 @@ function setOnlineStatus(online) {
     if (!badge) return;
     badge.classList.remove('online', 'offline');
     badge.classList.add(online ? 'online' : 'offline');
-    badge.title = online ? 'Online' : 'Offline – Änderungen werden lokal gespeichert';
+    badge.title = online ? 'Online' : 'Offline - Änderungen werden lokal gespeichert';
     badge.innerHTML = online
         ? '<i class="fa-solid fa-cloud"></i> Online'
         : '<i class="fa-solid fa-triangle-exclamation"></i> Offline (Lokal)';
@@ -824,7 +824,7 @@ function renderRichTextAttachment(html = 'Text hier eingeben...') {
     const safe = sanitizeRichTextHTML(html);
     const hint = plainTextFromRichHtml(html, 200);
     return `<div class="attachment-item rt-container rt-container-compact" data-type="richtext">
-        <div class="rt-compact-hint"><i class="fa-solid fa-font" style="color:var(--brand); margin-right:6px;" aria-hidden="true"></i><span>${escapeHtml(hint || 'Formatierter Text – Inhalt in der Karte unten bearbeiten')}</span></div>
+        <div class="rt-compact-hint"><i class="fa-solid fa-font" style="color:var(--brand); margin-right:6px;" aria-hidden="true"></i><span>${escapeHtml(hint || 'Formatierter Text - Inhalt in der Karte unten bearbeiten')}</span></div>
         <div class="rt-toolbar">${buildRichTextToolbar(true, true)}</div>
         <div class="rt-editor" contenteditable="true">${safe}</div>
     </div>`;
@@ -874,7 +874,7 @@ function exportJSON() {
 function exportMarkdown() {
     document.getElementById('export-menu').classList.remove('show');
     const data = serializeBoardFromDOM();
-    let md = `# ROOTS Consulting — SOP Dashboard\n\n> Exportiert: ${new Date().toLocaleString('de-DE')}\n\n---\n\n`;
+    let md = `# ROOTS Consulting - SOP Dashboard\n\n> Exportiert: ${new Date().toLocaleString('de-DE')}\n\n---\n\n`;
     data.forEach((track, tIdx) => {
         md += `## Track ${tIdx + 1}: ${track.title}\n\n`;
         (track.phases || []).forEach(phase => {
@@ -973,7 +973,7 @@ function exportSVG() {
         y += 300 + TRACK_PAD;
     });
     const totalW = Math.max(...data.map(t => (t.phases||[]).length)) * (CARD_W + PHASE_PAD) + 60;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${y+50}" style="font-family:system-ui,sans-serif;">\n<rect width="100%" height="100%" fill="#f4f7fb"/>\n<text x="20" y="35" font-size="16" font-weight="bold" fill="#0f172a">ROOTS Consulting — SOP Dashboard</text>\n${svgParts.join('\n')}\n</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${y+50}" style="font-family:system-ui,sans-serif;">\n<rect width="100%" height="100%" fill="#f4f7fb"/>\n<text x="20" y="35" font-size="16" font-weight="bold" fill="#0f172a">ROOTS Consulting - SOP Dashboard</text>\n${svgParts.join('\n')}\n</svg>`;
     const blob = new Blob([svg], {type: "image/svg+xml"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1791,7 +1791,7 @@ function refreshReadModeView() {
     updateSopNavActiveStates();
     updateSopNavTitle();
     if (steps.length === 0) {
-        elBody.innerHTML = '<div class="read-body-inner"><div class="read-phase"><p class="read-empty">Noch kein SOP-Inhalt – wechsle in den Bearbeiten-Modus.</p></div></div>';
+        elBody.innerHTML = '<div class="read-body-inner"><div class="read-phase"><p class="read-empty">Noch kein SOP-Inhalt - wechsle in den Bearbeiten-Modus.</p></div></div>';
         if (prevBtn) prevBtn.disabled = true;
         if (nextBtn) nextBtn.disabled = true;
         return;
